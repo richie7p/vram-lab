@@ -93,6 +93,8 @@ export type LaunchResult = {
   body: string;
   ggufFile: string;
   ollamaTag: string;
+  modelfile: string | null;
+  serverEnvironment: string | null;
   notes: string[];
   unsupported: string[];
 };
@@ -106,63 +108,67 @@ export function launchCommands(opts: {
   fit: Fit;
   backend: BackendId;
 }): LaunchResult {
+  const context = Math.min(opts.model.maxCtx, Math.max(512, Number.isFinite(opts.context) ? Math.round(opts.context) : 2048));
   const t = tags(opts.model);
   const qg = QUANT_GGUF[opts.quant.id];
   const qo = QUANT_OLLAMA[opts.quant.id];
   const ngl = opts.fit.fullOffload ? 99 : opts.fit.gpuLayers;
   const ggufFile = `${t.gguf}-${qg}.gguf`;
-  const ollamaTag = `${t.ollama}-${qo}`;
+  const ollamaTag = t.ollama.includes(":") ? `${t.ollama}-${qo}` : `${t.ollama}:${qo}`;
   const notes = [...opts.fit.backendNotes];
   const unsupported: string[] = [];
+  if (context > opts.model.nativeCtx) {
+    unsupported.push(`context ${context} 超過此目錄的原生長度 ${opts.model.nativeCtx}。請依模型版本與後端另行設定 RoPE／YaRN 等延伸方式；此模板未自動加入延伸設定。`);
+  }
   const fa = "--flash-attn on";
   const split = opts.gpu.cards > 1 ? " \\\n  -ts 50,50" : "";
 
   let body: string;
+  let modelfile: string | null = null;
+  let serverEnvironment: string | null = null;
 
   if (opts.backend === "llamacpp") {
     body = [
       `llama-cli \\`,
       `  -m ${ggufFile} \\`,
-      `  -c ${opts.context} \\`,
+      `  -c ${context} \\`,
       `  -ngl ${ngl} \\`,
       `  ${fa}${split}${kvFlags(opts.kv)}`,
     ].join("\n");
     notes.push(
-      `已寫入：GPU 層數 ${ngl === 99 ? "全部" : ngl}、context ${opts.context}、KV ${opts.kv.toUpperCase()}、Flash Attention。`,
+      `已寫入：GPU 層數 ${ngl === 99 ? "全部" : ngl}、context ${context}、KV ${opts.kv.toUpperCase()}、Flash Attention。`,
     );
   } else if (opts.backend === "ollama") {
-    body = [
-      `OLLAMA_FLASH_ATTENTION=1 ollama run ${ollamaTag}`,
-      ``,
-      `# Modelfile（與實驗室設定對齊）`,
+    modelfile = [
       `FROM ./${ggufFile}`,
-      `PARAMETER num_ctx ${opts.context}`,
+      `PARAMETER num_ctx ${context}`,
       `PARAMETER num_gpu ${ngl}`,
     ].join("\n");
-    notes.push(`已寫入：num_gpu=${ngl}、num_ctx=${opts.context}、Flash Attention 環境變數。`);
-    if (opts.kv !== "fp16") {
-      unsupported.push(`KV ${opts.kv.toUpperCase()}：Ollama 沒有穩定對應參數，請改 llama.cpp 或接受預設 FP16 KV。`);
-    }
+    body = "ollama create vram-lab-local -f Modelfile\nollama run vram-lab-local";
+    notes.push(`先將下方內容存為 Modelfile，並準備同資料夾的 GGUF；num_gpu=${ngl}、num_ctx=${context}。Flash Attention 需在 Ollama 服務啟動前設定。`);
+    const cacheType = { fp16: "f16", q8: "q8_0", q4: "q4_0" }[opts.kv];
+    serverEnvironment = `OLLAMA_FLASH_ATTENTION=1\nOLLAMA_KV_CACHE_TYPE=${cacheType}`;
+    notes.push("將服務環境變數設好後重新啟動 Ollama；KV 量化需 Flash Attention 支援，設定會影響服務中的所有模型。");
   } else {
     const tp = Math.max(1, opts.gpu.cards);
     body = [
-      `vllm serve ${t.gguf} \\`,
-      `  --max-model-len ${opts.context} \\`,
+      `vllm serve /absolute/path/to/hf-model \\`,
+      `  --max-model-len ${context} \\`,
       `  --tensor-parallel-size ${tp} \\`,
       `  --gpu-memory-utilization 0.90 \\`,
       `  --dtype auto`,
     ].join("\n");
-    unsupported.push("vLLM 不載入 GGUF。此指令只同步 context 與 GPU 數，權重請用 Hugging Face／AWQ／FP8。");
+    unsupported.push("請先替換本機 Hugging Face 模型目錄。vLLM 的 GGUF 支援有限；此模板未套用所選 GGUF 量化，需另核對模型格式、硬體與量化支援。");
     if (!opts.fit.fullOffload) {
-      unsupported.push("目前組合無法完整放進 GPU，vLLM 沒有 -ngl CPU offload。");
+      unsupported.push("目前組合無法完整放進 GPU。此估算未涵蓋 vLLM 的 --cpu-offload-gb；該功能不是 llama.cpp 的逐層 offload。");
     }
     if (opts.kv !== "fp16") {
       unsupported.push("vLLM 不使用 llama.cpp 的 KV 量化旗標。");
     }
-    notes.push(`已寫入：max-model-len=${opts.context}、tensor-parallel=${tp}。`);
+    notes.push(`已寫入：max-model-len=${context}、tensor-parallel=${tp}。`);
   }
 
   notes.push("檔名與 tag 為估計，請對到本機實際檔案。");
 
-  return { backend: opts.backend, body, ggufFile, ollamaTag, notes, unsupported };
+  return { backend: opts.backend, body, ggufFile, ollamaTag, modelfile, serverEnvironment, notes, unsupported };
 }

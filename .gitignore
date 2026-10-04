@@ -1,2 +1,16 @@
 AGENTS.md
 AGENTS.project.md
+playwright-report/
+test-results/
+
+.vercel/
+.output/
+.nitro/
+.tanstack/
+dist/
+.grok/preview.log
+.grok/status
+
+node_modules/
+screenshots/
+*.log

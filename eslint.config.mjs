@@ -10,6 +10,8 @@ export default tseslint.config(
   {
     ignores: [
       "dist/**",
+      "playwright-report/**",
+      "test-results/**",
       ".output/**",
       ".vercel/**",
       ".nitro/**",

@@ -47,15 +47,15 @@ type LabState = {
 function clampCtx(modelId: string, context: number) {
   const m = MODELS.find((x) => x.id === modelId);
   if (!m) return context;
-  return Math.min(Math.max(2048, context), m.maxCtx);
+  return Math.min(Math.max(2048, Number.isFinite(context) ? context : 2048), m.maxCtx);
 }
 
 function clampVram(n: number) {
-  return Math.min(192, Math.max(4, n));
+  return Math.min(192, Math.max(4, Number.isFinite(n) ? n : 4));
 }
 
 function clampRam(n: number) {
-  return Math.min(512, Math.max(4, n));
+  return Math.min(512, Math.max(4, Number.isFinite(n) ? n : 4));
 }
 
 export const useLabStore = create<LabState>()(
@@ -74,7 +74,7 @@ export const useLabStore = create<LabState>()(
       backend: "llamacpp",
       pins: [],
       setMode: (mode) => set({ mode }),
-      setGpu: (gpuId) => set({ gpuId, useCustomVram: false }),
+      setGpu: (gpuId) => set({ gpuId }),
       setModel: (modelId, family) =>
         set({
           modelId,
@@ -165,6 +165,6 @@ export const useLabStore = create<LabState>()(
         });
       },
     }),
-    { name: "vram-lab-config-v3" },
+    { name: "vram-lab-config-v3", skipHydration: true },
   ),
 );

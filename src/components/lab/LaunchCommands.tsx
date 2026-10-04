@@ -25,7 +25,7 @@ export function LaunchCommands({
   const cmds = launchCommands({ gpu, model, quant, context, kv, fit, backend });
 
   return (
-    <section className="rounded-lg bg-bg-elevated p-4 shadow-border sm:p-5">
+    <section aria-label="啟動指令" className="rounded-lg bg-bg-elevated p-4 shadow-border sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-xs font-medium tracking-wide text-muted uppercase">
           啟動指令
@@ -55,6 +55,16 @@ export function LaunchCommands({
           {cmds.ggufFile}
         </p>
       </div>
+      {cmds.modelfile && <div className="mt-4">
+        <h4 className="text-sm">Modelfile</h4>
+        <pre className="overflow-x-auto rounded-md bg-bg p-3 text-xs">{cmds.modelfile}</pre>
+        <CopyButton text={cmds.modelfile} label="複製 Modelfile" />
+      </div>}
+      {cmds.serverEnvironment && <div className="mt-4">
+        <h4 className="text-sm">Ollama 服務環境變數</h4>
+        <pre className="overflow-x-auto rounded-md bg-bg p-3 text-xs">{cmds.serverEnvironment}</pre>
+        <CopyButton text={cmds.serverEnvironment} label="複製服務設定" />
+      </div>}
       {cmds.unsupported.length > 0 ? (
         <ul className="mt-3 space-y-1">
           {cmds.unsupported.map((n) => (

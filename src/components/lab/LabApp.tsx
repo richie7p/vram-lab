@@ -6,13 +6,21 @@ import { QUANT_BY_ID } from "@/lib/lab/quants";
 import { verdictOf } from "@/lib/lab/recommend";
 import { useLabStore, type LabMode } from "@/lib/lab/store";
 import { cn } from "@/lib/utils";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Configurator } from "./Configurator";
 import { Led } from "./Led";
 import { Readout } from "./Readout";
 import { RecommendPanel } from "./RecommendPanel";
 
 export function LabApp() {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    // Restore after the server markup hydrates, before accepting user changes.
+    void Promise.resolve(useLabStore.persist.rehydrate()).then(
+      () => setHydrated(true),
+      () => setHydrated(true),
+    );
+  }, []);
   const mode = useLabStore((s) => s.mode);
   const setMode = useLabStore((s) => s.setMode);
   const gpuId = useLabStore((s) => s.gpuId);
@@ -43,7 +51,7 @@ export function LabApp() {
   }
 
   return (
-    <div className="lab-grid min-h-dvh bg-bg text-fg">
+    <div className="lab-grid min-h-dvh bg-bg text-fg" inert={!hydrated} aria-busy={!hydrated}>
       <header className="sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">

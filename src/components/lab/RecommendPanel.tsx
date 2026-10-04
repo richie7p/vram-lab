@@ -126,6 +126,7 @@ export function RecommendPanel() {
         </div>
       </section>
 
+      <p className="text-xs leading-relaxed text-muted">推薦來自靜態模型表與理論容量估算；速度區間不是統計信賴區間。未經真機校準，請先核對實際模型檔案、驅動與後端支援。</p>
       <div className="grid gap-4 lg:grid-cols-2">
         {rec.comfortable ? (
           <RecBlock card={rec.comfortable} onApply={apply} featured />

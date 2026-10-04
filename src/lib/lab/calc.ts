@@ -20,7 +20,7 @@ const KV_BYTES: Record<KvPrecision, number> = {
 };
 
 function clamp(n: number, lo: number, hi: number) {
-  return Math.min(hi, Math.max(lo, n));
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : lo;
 }
 
 function round1(n: number) {
@@ -90,12 +90,12 @@ export function budgetVramGB(
 function backendNotes(backend: BackendId, kv: KvPrecision, quant: Quant): string[] {
   const out: string[] = [];
   if (backend === "vllm") {
-    out.push("vLLM 不跑 GGUF。指令只對齊 context 與 GPU 數，量化請改 AWQ／FP8／FP16。");
-    out.push("vLLM 沒有 llama.cpp 式的 CPU offload；放不下就需要更多 VRAM 或張量並行。");
+    out.push("vLLM 有 GGUF 支援，但功能與效能有限；此模板使用本機模型目錄，量化需另依模型設定。");
+    out.push("此 vLLM 估算採完整 GPU 載入；未模擬 --cpu-offload-gb 的 RAM／傳輸成本。");
   }
   if (backend === "ollama") {
     out.push("Ollama 的 num_gpu 對應 GPU 層數。Flash Attention 靠環境變數，不是所有建置都開。");
-    if (kv !== "fp16") out.push("Ollama 對 KV 量化支援不完整，Q8／Q4 KV 以 llama.cpp 較準。");
+    if (kv !== "fp16") out.push("Ollama KV 量化需 Flash Attention，並設定 OLLAMA_KV_CACHE_TYPE=q8_0 或 q4_0 後重啟服務。");
     if (quant.id === "iq4xs") out.push("Ollama 官方 tag 常沒有 IQ4_XS，請自建 Modelfile 指向 GGUF。");
   }
   if (backend === "llamacpp" && kv !== "fp16") {
@@ -110,7 +110,7 @@ function estimateCore(opts: EstimateInput): CoreFit {
   const { gpu, model, quant } = opts;
   const backend: BackendId = opts.backend ?? "llamacpp";
   const ramGB = clamp(opts.ramGB ?? 32, 4, 512);
-  const vramGB = Math.max(2, opts.vramGB ?? gpu.vramGB);
+  const vramGB = Math.max(2, Number.isFinite(opts.vramGB) ? opts.vramGB! : gpu.vramGB);
   const context = clamp(Math.round(opts.context), 512, model.maxCtx);
   const usable = usableVramGB(vramGB, gpu.cards);
   const weights = weightsGB(model, quant);

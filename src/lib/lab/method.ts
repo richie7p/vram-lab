@@ -8,5 +8,5 @@ export const METHOD_LINES = [
   "容量缺口 = max(0, 完整需求 − 可用 VRAM)。剩餘是 GPU 上放完之後的餘地，兩者不是同一件事。",
   "系統 RAM 需求 ≈ 6 GB 系統保留 + CPU 承接權重 × 1.15。KV 預設仍在 GPU。",
   "速度用顯卡頻寬 × 解碼效率 / 有效權重，再加 kernel 開銷。MoE 用 active 參數估 decode。",
-  "架構數字來自各模型公開 config（層數、KV heads、head dim）。全部是理論估算，不是實測 benchmark。",
+  "模型表為靜態近似值；Qwen2.5-7B 的層數、KV heads、head dim 已對照官方 config，其餘表項仍需逐項來源核對。資料日期不代表全表重新驗證。",
 ] as const;

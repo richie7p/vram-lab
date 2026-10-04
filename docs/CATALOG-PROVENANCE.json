@@ -1,30 +1,48 @@
 {
   "review_date": "2026-10-04",
-  "scope": "Static catalogue evidence inventory; no hardware measurements. Null fields require evidence, not inferred certification.",
+  "scope": "31 official public config snapshots archived; 9 gated configs unavailable. Only listed fields verified. Model contexts, parameter counts, GPU specifications and hardware performance remain partial or unverified.",
   "models": [
     {
       "id": "qwen25-05b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "18e18afcaccafade98daf13a54092927904649e1dd4eba8299ab717d5d94ff45",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen25-05b.json"
     },
     {
       "id": "qwen25-15b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "98d2ff8cc47488d08a2b0b3acf4eb99ef210779b42bd48605f6b8e36acdbf670",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen25-15b.json"
     },
     {
       "id": "qwen25-3b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "eed00b17e22553979d090fa492e587e92885e328914c8e0b0b78f0a0d3576b3b",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen25-3b.json"
     },
     {
       "id": "qwen25-7b",
@@ -38,295 +56,464 @@
       ],
       "checked_date": "2026-10-04",
       "config_sha256": "7463bb0ea78315365e6c6b74de4e73bbcc8359dfb0c5a737584e077d42c0b03c",
-      "status": "partial architecture verification"
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen25-7b.json"
     },
     {
       "id": "qwen25-14b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen2.5-14B-Instruct/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "0f2085dbbe2ee251bd6a6a0797d84a6ce34436044d629aa3cba793b43d311a9e",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen25-14b.json"
     },
     {
       "id": "qwen25-32b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen2.5-32B-Instruct/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "9c6772f138ef9e5b3d1c18f2c87e451bbc01f5f1a4eabb36f9bf4f53829b903e",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen25-32b.json"
     },
     {
       "id": "qwen25-coder-32b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-32B-Instruct/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "9fb1473a47db69c00c02f365c7b9e9d84fd2163c687c63b5a31167ebb2b189a6",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen25-coder-32b.json"
     },
     {
       "id": "qwen25-72b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen2.5-72B-Instruct/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "14ca217334fe0fd10148413592d68c99eeb33431ed89c1afa130fee560be2a29",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen25-72b.json"
     },
     {
       "id": "qwen3-06b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen3-0.6B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen3-06b.json"
     },
     {
       "id": "qwen3-17b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen3-1.7B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "1ddb5b89ebc90dcb417a45c213d818577e65976454d29385c8f6140771d95197",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen3-17b.json"
     },
     {
       "id": "qwen3-4b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen3-4B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "8ba006f74fecfaaeb392872a60f4a480e7ec9860153d2e1b769ec81f9a147f8a",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen3-4b.json"
     },
     {
       "id": "qwen3-8b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen3-8B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "f7c4eadfbbf522470667b797a3c89be2524832d2d599797248dc304fff447c30",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen3-8b.json"
     },
     {
       "id": "qwen3-14b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen3-14B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "e73c3664ca09b10a673fef0c22e8a6b456201d49bd4713c9691f775720e8857a",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen3-14b.json"
     },
     {
       "id": "qwen3-32b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen3-32B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "97e295b63283935788fac5e4f8860862a56d4089538cafc93f0431f2ebe483bb",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen3-32b.json"
     },
     {
       "id": "qwq-32b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/QwQ-32B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "61feaaef406a79c195ba8629921e99ad27753434c1e7bf60f5809cd73a86de68",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwq-32b.json"
     },
     {
       "id": "qwen3-30b-a3b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen3-30B-A3B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim",
+        "nativeCtx",
+        "maxCtx"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "2850ddb3bf7aecad20b611e2d44f3077fc8193f4827c93beddd4c02ad63c2297",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen3-30b-a3b.json",
+      "context_source_url": "https://huggingface.co/Qwen/Qwen3-30B-A3B"
     },
     {
       "id": "qwen3-235b-a22b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/Qwen/Qwen3-235B-A22B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim",
+        "nativeCtx",
+        "maxCtx"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "0ecd5d6fe6f2db6739e4e36ab06b88ebe7bd013ef31b9583f43796059a2b23a4",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/qwen3-235b-a22b.json",
+      "context_source_url": "https://huggingface.co/Qwen/Qwen3-235B-A22B"
     },
     {
       "id": "llama32-1b",
-      "source_url": null,
+      "source_url": "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct/raw/main/config.json",
       "verified_fields": [],
-      "checked_date": null,
+      "checked_date": "2026-10-04",
       "config_sha256": null,
-      "status": "source and revision review required"
+      "status": "public config unavailable (HTTP 401); architecture not verified"
     },
     {
       "id": "llama32-3b",
-      "source_url": null,
+      "source_url": "https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct/raw/main/config.json",
       "verified_fields": [],
-      "checked_date": null,
+      "checked_date": "2026-10-04",
       "config_sha256": null,
-      "status": "source and revision review required"
+      "status": "public config unavailable (HTTP 401); architecture not verified"
     },
     {
       "id": "llama31-8b",
-      "source_url": null,
+      "source_url": "https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct/raw/main/config.json",
       "verified_fields": [],
-      "checked_date": null,
+      "checked_date": "2026-10-04",
       "config_sha256": null,
-      "status": "source and revision review required"
+      "status": "public config unavailable (HTTP 401); architecture not verified"
     },
     {
       "id": "llama33-70b",
-      "source_url": null,
+      "source_url": "https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/raw/main/config.json",
       "verified_fields": [],
-      "checked_date": null,
+      "checked_date": "2026-10-04",
       "config_sha256": null,
-      "status": "source and revision review required"
+      "status": "public config unavailable (HTTP 401); architecture not verified"
     },
     {
       "id": "llama4-scout",
-      "source_url": null,
+      "source_url": "https://huggingface.co/meta-llama/Llama-4-Scout-17B-16E-Instruct/raw/main/config.json",
       "verified_fields": [],
-      "checked_date": null,
+      "checked_date": "2026-10-04",
       "config_sha256": null,
-      "status": "source and revision review required"
+      "status": "public config unavailable (HTTP 401); architecture not verified"
     },
     {
       "id": "gemma3-1b",
-      "source_url": null,
+      "source_url": "https://huggingface.co/google/gemma-3-1b-it/raw/main/config.json",
       "verified_fields": [],
-      "checked_date": null,
+      "checked_date": "2026-10-04",
       "config_sha256": null,
-      "status": "source and revision review required"
+      "status": "public config unavailable (HTTP 401); architecture not verified"
     },
     {
       "id": "gemma3-4b",
-      "source_url": null,
+      "source_url": "https://huggingface.co/google/gemma-3-4b-it/raw/main/config.json",
       "verified_fields": [],
-      "checked_date": null,
+      "checked_date": "2026-10-04",
       "config_sha256": null,
-      "status": "source and revision review required"
+      "status": "public config unavailable (HTTP 401); architecture not verified"
     },
     {
       "id": "gemma3-12b",
-      "source_url": null,
+      "source_url": "https://huggingface.co/google/gemma-3-12b-it/raw/main/config.json",
       "verified_fields": [],
-      "checked_date": null,
+      "checked_date": "2026-10-04",
       "config_sha256": null,
-      "status": "source and revision review required"
+      "status": "public config unavailable (HTTP 401); architecture not verified"
     },
     {
       "id": "gemma3-27b",
-      "source_url": null,
+      "source_url": "https://huggingface.co/google/gemma-3-27b-it/raw/main/config.json",
       "verified_fields": [],
-      "checked_date": null,
+      "checked_date": "2026-10-04",
       "config_sha256": null,
-      "status": "source and revision review required"
+      "status": "public config unavailable (HTTP 401); architecture not verified"
     },
     {
       "id": "r1-distill-8b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-8B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "54acfad3cffe057640904ca8a1e83525e6551c70c7a04c641f5a9eda0bbf64bd",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/r1-distill-8b.json"
     },
     {
       "id": "r1-distill-14b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-14B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "fdb89460be9a6383451437cdf632a3e087522efa682265461f33507e7069f026",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/r1-distill-14b.json"
     },
     {
       "id": "r1-distill-32b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "2c003fe40b13d2d1f372254d77177ed753176150f3d424d1b5ad22ff1d78a987",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/r1-distill-32b.json"
     },
     {
       "id": "deepseek-v3",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "fp16_compressed_kv_bytes_per_token"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9",
+      "status": "MLA compressed-cache surrogate checked; kvHeads/headDim are not standard attention fields",
+      "config_file": "tests/fixtures/model-configs/deepseek-v3.json"
     },
     {
       "id": "nemotron-nano-8b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/nvidia/Llama-3.1-Nemotron-Nano-8B-v1/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "a0530bd200627614dee5ed836f5397f7cf5fed128431fab17541a01e492d01dc",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/nemotron-nano-8b.json"
     },
     {
       "id": "nemotron-super-49b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/nvidia/Llama-3_3-Nemotron-Super-49B-v1/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "4a39c404332d8117886499d9427dfd9754ed9c911c567b3e4b0f5b89701a0efd",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/nemotron-super-49b.json",
+      "verification_note": "49 of 80 block_configs have attention.no_op=false; 64 Q heads / 8 heads per group = 8 KV heads."
     },
     {
       "id": "nemotron-70b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/nvidia/Llama-3.1-Nemotron-70B-Instruct-HF/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "31d5216804db298420edd8e9fe0f4d2a098c94999331d6322c9c584149be1490",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/nemotron-70b.json"
     },
     {
       "id": "ministral3-3b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/mistralai/Ministral-3-3B-Instruct-2512/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "a9c3658d7bb45ab5be77e660d483a9d3f8a3d54bda2c69a1c576bdfefbc16be6",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/ministral3-3b.json"
     },
     {
       "id": "ministral3-8b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/mistralai/Ministral-3-8B-Instruct-2512/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "196c38570bb4bc8168a59cc0189c9a9b9974be8dcca6b46dfc109dbd250c01aa",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/ministral3-8b.json"
     },
     {
       "id": "ministral3-14b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/mistralai/Ministral-3-14B-Instruct-2512/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "fc51295bdc0b39c015c9c3ca5d649de183eae73a23b8cbab1a0e055be8d5fa04",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/ministral3-14b.json"
     },
     {
       "id": "phi4-mini",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/microsoft/Phi-4-mini-instruct/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "ac65d86061d3d0d704ee2511fd0eb8713ef19eb6eedba17c3080a4165d5b933b",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/phi4-mini.json"
     },
     {
       "id": "phi4",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/microsoft/phi-4/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "07eedad2c48798b6e3728e4a1b75e0e092019a375ba725a40e40c78d13664045",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/phi4.json"
     },
     {
       "id": "mistral-7b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "affafc6478ec0fd07a32f0ca57aa2fc57743f4d17d6730f86a96ac24d1507f99",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/mistral-7b.json"
     },
     {
       "id": "mistral-small-24b",
-      "source_url": null,
-      "verified_fields": [],
-      "checked_date": null,
-      "config_sha256": null,
-      "status": "source and revision review required"
+      "source_url": "https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "ff5f8d1747db4e16def20db719d867e74d0b764330249357351b2b44520b8001",
+      "status": "partial architecture verification; context semantics and runtime allocation not certified",
+      "config_file": "tests/fixtures/model-configs/mistral-small-24b.json"
     }
   ],
   "gpus": [

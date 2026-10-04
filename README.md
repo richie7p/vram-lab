@@ -73,7 +73,7 @@ npm run test:e2e
 
 ## 授權
 
-私人倉庫。估算僅供規劃參考，請以你本機實際 llama.cpp / Ollama / vLLM 為準。
+估算僅供規劃參考，請以你本機實際 llama.cpp / Ollama / vLLM 為準。
 
 
 ## PDF audit follow-up

@@ -117,6 +117,9 @@ export function launchCommands(opts: {
   const ollamaTag = t.ollama.includes(":") ? `${t.ollama}-${qo}` : `${t.ollama}:${qo}`;
   const notes = [...opts.fit.backendNotes];
   const unsupported: string[] = [];
+  if (context > opts.model.nativeCtx) {
+    unsupported.push(`context ${context} 超過此目錄的原生長度 ${opts.model.nativeCtx}。請依模型版本與後端另行設定 RoPE／YaRN 等延伸方式；此模板未自動加入延伸設定。`);
+  }
   const fa = "--flash-attn on";
   const split = opts.gpu.cards > 1 ? " \\\n  -ts 50,50" : "";
 

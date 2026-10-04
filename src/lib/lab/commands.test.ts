@@ -49,3 +49,14 @@ test("launch contexts are finite and bounded by model capacity", () => {
     assert.ok(Number.isFinite(value) && value >= 512 && value <= base.model.maxCtx);
   }
 });
+
+test("extended context templates require explicit model and backend configuration", () => {
+  const opts = { ...base, model: MODEL_BY_ID["qwen3-30b-a3b"], context: 65536 };
+  for (const backend of ["llamacpp", "ollama", "vllm"] as const) {
+    const result = launchCommands({ ...opts, fit: estimate(opts), backend });
+    assert.ok(result.unsupported.some(note => note.includes("未自動加入延伸設定")));
+    const native = { ...opts, context: 32768 };
+    const nativeResult = launchCommands({ ...native, fit: estimate(native), backend });
+    assert.ok(!nativeResult.unsupported.some(note => note.includes("未自動加入延伸設定")));
+  }
+});

@@ -48,3 +48,17 @@ test("recommendations preserve custom capacity when changing the speed reference
   expect(errors).toEqual([]);
   await mkdir("screenshots", { recursive: true }); await page.screenshot({ path: `screenshots/${info.project.name}-recommendation.png` });
 });
+
+test("extended Qwen context shows the manual-configuration warning and correct upper limit", async ({ page }, info) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.getByRole("searchbox", { name: "篩選模型" }).fill("Qwen3 30B-A3B");
+  await page.getByRole("button", { name: /^Qwen3 30B-A3B/ }).click();
+  await expect(page.getByRole("slider", { name: "Context length" })).toHaveAttribute("max", "131072");
+  await page.getByRole("button", { name: "64K", exact: true }).click();
+  const launch = page.getByRole("region", { name: "啟動指令", exact: true });
+  await expect(launch).toContainText("未自動加入延伸設定");
+  await launch.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: info.outputPath("extended-context.png") });
+  await page.getByRole("button", { name: "32K", exact: true }).click();
+  await expect(launch).not.toContainText("未自動加入延伸設定");
+});

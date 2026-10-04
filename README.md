@@ -28,7 +28,7 @@
 - **量化**：Q2、Q3_K_M、IQ4_XS、Q4_K_S、Q4_K_M、Q5、Q6、Q8、FP16
 - **顯存拆開顯示**：完整需求、GPU 實際配置、CPU／RAM 承接、容量缺口
 - **自訂 VRAM**：輸入 4 GB 再載入推薦，容量仍按 4 GB 算；最接近的卡只當速度參考
-- **系統 RAM 與後端**：CPU offload 會看 RAM；vLLM 放不下就判定不適合
+- **系統 RAM 與後端**：CPU offload 會看 RAM；vLLM 預設以完整 GPU 載入判定（未估 --cpu-offload-gb）
 - **啟動指令**：層數、context、KV 精度、Flash Attention 會寫進指令；後端不支援的組合會標出來
 - **VRAM 推薦**：最舒服／最大挑戰／也適合，挑戰檔會列出量化、速度、context、記憶體代價
 
@@ -45,7 +45,7 @@
 | 系統 RAM | 約 6 GB 保留 + CPU 承接權重 × 1.15 |
 | 速度 | 顯卡頻寬 × 解碼效率 / 有效權重，再加 kernel 開銷；MoE 用 active 參數估 decode |
 
-架構數字來自各模型公開 config。會受後端、CPU、記憶體頻寬、prompt 長度、驅動與是否開 Flash Attention 影響。
+模型表包含近似值，尚未逐項完成來源核對；目前已對照 Qwen2.5-7B 官方配置的主要架構欄位。會受後端、CPU、記憶體頻寬、prompt 長度、驅動與是否開 Flash Attention 影響。
 
 ## 技術棧
 
@@ -57,13 +57,16 @@
 ## 本地開發
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
 ```bash
 npm run typecheck
-npx tsx --test src/lib/lab/calc.test.ts
+npm test
+npm run lint
+npm run build
+npm run test:e2e
 ```
 
 主要程式在 `src/lib/lab/`（計算、目錄、推薦）與 `src/components/lab/`（實驗室 UI）。
@@ -71,3 +74,8 @@ npx tsx --test src/lib/lab/calc.test.ts
 ## 授權
 
 私人倉庫。估算僅供規劃參考，請以你本機實際 llama.cpp / Ollama / vLLM 為準。
+
+
+## PDF audit follow-up
+
+See [AUDIT-FOLLOWUP](docs/AUDIT-FOLLOWUP.md) for reproducible checks and [DATA-PROVENANCE](docs/DATA-PROVENANCE.md) for source coverage and unmeasured assumptions.

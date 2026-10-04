@@ -1,4 +1,4 @@
-import { estimate, formatGB, formatTok } from "./calc";
+import { estimate, formatGB } from "./calc";
 import { GPUS } from "./gpus";
 import { MODELS } from "./models";
 import { QUANT_BY_ID } from "./quants";
@@ -115,7 +115,7 @@ export function recommendForVram(
   ramGB = 32,
   backend: BackendId = "llamacpp",
 ): RecResult {
-  const vram = Math.min(192, Math.max(4, vramGB));
+  const vram = Math.min(192, Math.max(4, Number.isFinite(vramGB) ? vramGB : 4));
   const gpu = syntheticGpu(vram);
   const nearestGpu =
     [...GPUS].sort((a, b) => Math.abs(a.vramGB - vram) - Math.abs(b.vramGB - vram))[0] ?? null;

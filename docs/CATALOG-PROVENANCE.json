@@ -1,0 +1,448 @@
+{
+  "review_date": "2026-10-04",
+  "scope": "Static catalogue evidence inventory; no hardware measurements. Null fields require evidence, not inferred certification.",
+  "models": [
+    {
+      "id": "qwen25-05b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen25-15b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen25-3b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen25-7b",
+      "source_url": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/raw/main/config.json",
+      "verified_fields": [
+        "layers",
+        "attnLayers",
+        "kvHeads",
+        "headDim",
+        "nativeCtx"
+      ],
+      "checked_date": "2026-10-04",
+      "config_sha256": "7463bb0ea78315365e6c6b74de4e73bbcc8359dfb0c5a737584e077d42c0b03c",
+      "status": "partial architecture verification"
+    },
+    {
+      "id": "qwen25-14b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen25-32b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen25-coder-32b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen25-72b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen3-06b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen3-17b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen3-4b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen3-8b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen3-14b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen3-32b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwq-32b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen3-30b-a3b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "qwen3-235b-a22b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "llama32-1b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "llama32-3b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "llama31-8b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "llama33-70b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "llama4-scout",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "gemma3-1b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "gemma3-4b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "gemma3-12b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "gemma3-27b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "r1-distill-8b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "r1-distill-14b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "r1-distill-32b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "deepseek-v3",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "nemotron-nano-8b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "nemotron-super-49b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "nemotron-70b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "ministral3-3b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "ministral3-8b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "ministral3-14b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "phi4-mini",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "phi4",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "mistral-7b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    },
+    {
+      "id": "mistral-small-24b",
+      "source_url": null,
+      "verified_fields": [],
+      "checked_date": null,
+      "config_sha256": null,
+      "status": "source and revision review required"
+    }
+  ],
+  "gpus": [
+    {
+      "id": "1660s",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "4060",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "4060m",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "3070",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "3060",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "4070",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "5070",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "4070tis",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "5060ti",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "5070ti",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "4080s",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "5080",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "3090",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "4090",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "7900xtx",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "5090",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "3090x2",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "a6000",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    },
+    {
+      "id": "pro6000",
+      "source_url": null,
+      "checked_date": null,
+      "status": "capacity/bandwidth revision review required; decodeEfficiency and kernelMs are uncalibrated heuristics"
+    }
+  ]
+}

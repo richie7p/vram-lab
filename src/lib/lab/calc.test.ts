@@ -136,7 +136,7 @@ test("custom 4GB does not inherit 1660 Super 6GB usable", () => {
   assert.ok(usableVramGB(4) < usableVramGB(6) - 1);
 });
 
-test("vLLM cannot partial-offload a model that does not fit", () => {
+test("vLLM full-GPU estimate rejects a model that does not fit", () => {
   const fit = estimate({
     gpu: GPU_BY_ID["3060"],
     model: MODEL_BY_ID["llama33-70b"],

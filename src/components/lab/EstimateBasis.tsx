@@ -22,6 +22,11 @@ export function EstimateBasis() {
               {line}
             </li>
           ))}
+          <li className="text-xs leading-relaxed text-muted">
+            <a className="underline" href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/config.json" target="_blank" rel="noreferrer">Qwen2.5-7B 官方配置</a>
+            {" · "}<a className="underline" href="https://docs.ollama.com/faq" target="_blank" rel="noreferrer">Ollama 服務與 KV 設定</a>
+            {" · "}<a className="underline" href="https://docs.vllm.ai/en/v0.18.1/features/quantization/gguf/" target="_blank" rel="noreferrer">vLLM GGUF 限制</a>
+          </li>
           <li className="text-xs leading-relaxed text-subtle">
             速度、VRAM、RAM 皆為理論估算，不是實測。會受後端、CPU、記憶體頻寬、prompt 長度與驅動影響。
           </li>

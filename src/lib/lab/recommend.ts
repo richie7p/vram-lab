@@ -1,4 +1,4 @@
-import { estimate, formatGB, formatTok } from "./calc";
+import { estimate, formatGB } from "./calc";
 import { GPUS } from "./gpus";
 import { MODELS } from "./models";
 import { QUANT_BY_ID } from "./quants";

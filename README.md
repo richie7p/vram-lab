@@ -39,11 +39,11 @@
 | 項目 | 怎麼算 |
 | --- | --- |
 | 權重 VRAM | 參數量(B) × 每權重位元 / 8，對齊常見 GGUF 大小 |
-| KV cache | `2 × 注意力層 × KV heads × head_dim × context × 每元素位元組 / 1024³` |
+| KV cache | `2 × 注意力層 × KV heads × head_dim × context × 每元素位元組 / 1024³`；滑動視窗層（Gemma 3、Llama 4）只算視窗內 token |
 | 完整需求 | 權重 + KV + 開銷（CUDA／compute buffer／ggml） |
 | 容量缺口 | `max(0, 完整需求 − 可用 VRAM)` |
 | 系統 RAM | 約 6 GB 保留 + CPU 承接權重 × 1.15 |
-| 速度 | 顯卡頻寬 × 解碼效率 / 有效權重，再加 kernel 開銷；MoE 用 active 參數估 decode |
+| 速度 | 顯卡頻寬 × 解碼效率 / 有效權重，再加 kernel 開銷；MoE 以 active 比例 + 約 10% 路由／共享開銷估 decode |
 
 架構數字來自各模型公開 config。會受後端、CPU、記憶體頻寬、prompt 長度、驅動與是否開 Flash Attention 影響。
 
@@ -52,7 +52,8 @@
 - TanStack Start + React
 - Zustand（persist）
 - Tailwind CSS v4
-- 純前端，無帳號、無後端資料庫
+- 實驗室本身是純前端，不需登入；設定只存在瀏覽器
+- 專案內的 `src/lib/auth`、`src/lib/app-data`、`migrations/` 與 `scripts/` 是 Grok 部署範本附帶的基礎設施，實驗室功能不依賴它們
 
 ## 本地開發
 

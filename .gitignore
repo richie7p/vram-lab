@@ -1,2 +1,7 @@
 AGENTS.md
 AGENTS.project.md
+node_modules/
+.vercel/
+.output/
+dist/
+.env*.local

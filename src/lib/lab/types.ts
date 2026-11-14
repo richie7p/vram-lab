@@ -78,6 +78,11 @@ export type Model = {
   maxCtx: number;
   nativeCtx: number;
   kind: ModelArch;
+  /**
+   * Sliding-window / chunked attention. `localLayers` of the `attnLayers` only
+   * keep the last `window` tokens in KV; the rest attend to the full context.
+   */
+  swa?: { window: number; localLayers: number };
   purpose: string;
   note?: string;
 };

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { useMemo, useState, type ReactNode } from "react";
 import { Led } from "./Led";
 
-const CTX_PRESETS = [4096, 8192, 16384, 32768, 65536, 131072];
+const CTX_PRESETS = [4096, 8192, 16384, 32768, 65536, 131072, 262144];
 const RAM_PRESETS = [8, 16, 32, 64, 128];
 const KV_OPTS: { id: KvPrecision; label: string }[] = [
   { id: "fp16", label: "KV FP16" },

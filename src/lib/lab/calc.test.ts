@@ -163,3 +163,46 @@ test("tiny RAM fails offload feasibility", () => {
     assert.equal(fit.ramOk, false);
   }
 });
+
+test("Gemma 3 27B sliding window keeps 32K KV small", () => {
+  const m = MODEL_BY_ID["gemma3-27b"];
+  const kv = kvCacheGB(m, 32768, "fp16");
+  // 10 global layers × 32K + 52 local layers × 1K, 16 KV heads × 128 dim.
+  const expected = (2 * 16 * 128 * 2 * (10 * 32768 + 52 * 1024)) / 1024 ** 3;
+  assert.ok(Math.abs(kv - expected) < 1e-9, `${kv} vs ${expected}`);
+  assert.ok(kv < 3, `got ${kv}`);
+});
+
+test("sliding window changes nothing below the window", () => {
+  const m = MODEL_BY_ID["gemma3-27b"];
+  const full = (kvBytesPerToken(m, "fp16") * 1024) / 1024 ** 3;
+  assert.equal(kvCacheGB(m, 1024, "fp16"), full);
+});
+
+test("4090 full-offloads Gemma 3 27B Q4 at 32K", () => {
+  const fit = estimate({
+    gpu: GPU_BY_ID["4090"],
+    model: MODEL_BY_ID["gemma3-27b"],
+    quant: QUANT_BY_ID.q4km,
+    context: 32768,
+    kv: "fp16",
+  });
+  assert.equal(fit.fullOffload, true);
+  assert.notEqual(fit.verdict, "no");
+});
+
+test("Llama 4 Scout chunked layers cap KV growth", () => {
+  const m = MODEL_BY_ID["llama4-scout"];
+  const kv128 = kvCacheGB(m, 131072, "fp16");
+  const dense = (kvBytesPerToken(m, "fp16") * 131072) / 1024 ** 3;
+  assert.ok(kv128 < dense * 0.3, `${kv128} vs dense ${dense}`);
+});
+
+test("Qwen3-30B-A3B decodes far faster than a dense model of the same file size", () => {
+  const base = { gpu: GPU_BY_ID["4090"], quant: QUANT_BY_ID.q4km, context: 8192, kv: "fp16" as const };
+  const moe = estimate({ ...base, model: MODEL_BY_ID["qwen3-30b-a3b"] });
+  const dense = estimate({ ...base, model: MODEL_BY_ID["qwen25-32b"] });
+  assert.equal(moe.fullOffload, true);
+  assert.ok(moe.speedMid > 120 && moe.speedMid < 260, `got ${moe.speedMid}`);
+  assert.ok(moe.speedMid > dense.speedMid * 3);
+});

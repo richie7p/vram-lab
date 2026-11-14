@@ -41,12 +41,29 @@ export function weightsGB(model: Model, quant: Quant): number {
   return (model.paramsB * quant.bpw) / 8;
 }
 
+/** KV bytes per token if every attention layer kept the full context. */
 export function kvBytesPerToken(model: Model, kv: KvPrecision): number {
   return 2 * model.attnLayers * model.kvHeads * model.headDim * KV_BYTES[kv];
 }
 
+/**
+ * Layer-tokens held in KV. Sliding-window (Gemma 3) and chunked (Llama 4)
+ * layers cap at their window, so long context mostly costs the global layers.
+ */
+function kvLayerTokens(model: Model, context: number): number {
+  const local = clamp(model.swa?.localLayers ?? 0, 0, model.attnLayers);
+  const window = model.swa?.window ?? context;
+  return (model.attnLayers - local) * context + local * Math.min(context, window);
+}
+
 export function kvCacheGB(model: Model, context: number, kv: KvPrecision): number {
-  return (kvBytesPerToken(model, kv) * context) / GIB;
+  const perLayerToken = kvBytesPerToken(model, kv) / Math.max(model.attnLayers, 1);
+  return (perLayerToken * kvLayerTokens(model, context)) / GIB;
+}
+
+/** Average KV bytes per token at this context (accounts for sliding windows). */
+export function kvBytesPerTokenAt(model: Model, context: number, kv: KvPrecision): number {
+  return (kvCacheGB(model, context, kv) * GIB) / Math.max(context, 1);
 }
 
 export function overheadGB(vramGB: number, model: Model, context: number): number {
@@ -58,8 +75,10 @@ export function overheadGB(vramGB: number, model: Model, context: number): numbe
 function effectiveWeightGB(model: Model, quant: Quant): number {
   const total = weightsGB(model, quant);
   if (!model.activeParamsB || model.kind !== "moe") return total;
-  const ratio = clamp(model.activeParamsB / model.paramsB, 0.05, 1);
-  return total * (0.35 + 0.65 * ratio);
+  const ratio = clamp(model.activeParamsB / model.paramsB, 0.02, 1);
+  // Active experts + attention/shared weights; the 0.1 floor covers router,
+  // shared experts and less-coalesced expert reads.
+  return total * (0.1 + 0.9 * ratio);
 }
 
 export function rankVerdict(v: Verdict): number {
@@ -225,7 +244,7 @@ function estimateCore(opts: EstimateInput): CoreFit {
     speedLow: speed.low,
     speedHigh: speed.high,
     speedMid: speed.mid,
-    kvBytesPerToken: kvBytesPerToken(model, opts.kv),
+    kvBytesPerToken: kvBytesPerTokenAt(model, context, opts.kv),
     qualityCap,
   };
 }
@@ -239,7 +258,7 @@ export function estimate(opts: EstimateInput): Fit {
 
 export function suggestContext(opts: EstimateInput): number {
   const steps = [
-    2048, 4096, 6144, 8192, 12288, 16384, 24576, 32768, 49152, 65536, 98304, 131072,
+    2048, 4096, 6144, 8192, 12288, 16384, 24576, 32768, 49152, 65536, 98304, 131072, 196608, 262144,
   ].filter((c) => c <= opts.model.maxCtx);
 
   let best = Math.min(2048, opts.model.maxCtx);
@@ -323,6 +342,12 @@ function buildSuggestions(
 
   if (quant.id === "q2") {
     out.push({ text: "Q2 能跑不代表能用。指令遵循與推理會明顯變差，只適合實驗。" });
+  }
+
+  if (model.swa && context > model.swa.window) {
+    out.push({
+      text: `${model.swa.localLayers}/${model.attnLayers} 層只保留最近 ${formatTok(model.swa.window)} token 的 KV，長 context 主要吃剩下的全域層。需後端支援 SWA（新版 llama.cpp／Ollama／vLLM）。`,
+    });
   }
 
   if (model.kind === "moe") {

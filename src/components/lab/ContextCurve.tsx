@@ -1,7 +1,7 @@
 import { estimate, formatTok } from "@/lib/lab/calc";
 import type { BackendId, Gpu, KvPrecision, Model, Quant } from "@/lib/lab/types";
 
-const STEPS = [2048, 4096, 8192, 16384, 32768, 65536, 131072];
+const STEPS = [2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144];
 
 export function ContextCurve({
   gpu,

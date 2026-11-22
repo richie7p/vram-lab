@@ -126,3 +126,27 @@ for (const backend of ["llamacpp", "ollama", "vllm"]) {
     await close();
   });
 }
+
+test("adding a second card writes -ts and keeps it in the link", async () => {
+  const { page, close } = await open("/?g=3090&m=llama33-70b&q=q3km&c=8192&kv=fp16&ram=64&b=llamacpp");
+  await page.getByLabel("第二張顯卡").selectOption("3060");
+  await page.waitForFunction(() => location.search.includes("g2=3060"));
+  await page.waitForFunction(() => document.querySelector("pre")?.textContent?.includes("-ts 24,12"));
+  await close();
+});
+
+test("parallel users show per-user and total speed", async () => {
+  const { page, close } = await open("/?g=4090&m=qwen25-14b&q=q4km&c=8192&kv=fp16&ram=32&b=llamacpp");
+  await page.getByRole("button", { name: "4 人" }).click();
+  await page.getByText(/4 人合計約/).waitFor();
+  assert.match(await page.locator("pre").textContent(), /-np 4/);
+  await close();
+});
+
+test("pinning shows deltas against the current config", async () => {
+  const { page, close } = await open("/?g=4090&m=qwen25-14b&q=q4km&c=8192&kv=fp16&ram=32&b=llamacpp");
+  await page.getByRole("button", { name: "釘選目前組合" }).click();
+  await page.getByRole("button", { name: /^3090\s*24 GB$/ }).click();
+  await page.getByText(/^[+-]\d+%$/).first().waitFor();
+  await close();
+});

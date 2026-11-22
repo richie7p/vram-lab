@@ -37,3 +37,24 @@ test("sanitize repairs old persisted state", () => {
   assert.equal(c.context, DEFAULT_CONFIG.context);
   assert.equal(c.vramInput, 192);
 });
+
+test("second card, memory and parallel survive the URL", () => {
+  const c = { ...DEFAULT_CONFIG, gpuId: "3090" as const, gpu2Id: "3060" as const, memId: "ddr5-4ch" as const, parallel: 4 };
+  const qs = encodeConfig(c);
+  assert.match(qs, /g2=3060/);
+  assert.deepEqual(decodeConfig(qs, DEFAULT_CONFIG), c);
+});
+
+test("an impossible pair is dropped", () => {
+  // Apple machines and AMD cards cannot pair with an NVIDIA card.
+  assert.equal(decodeConfig("g=m4max128&g2=3060&m=qwen25-7b", DEFAULT_CONFIG)?.gpu2Id, null);
+  assert.equal(decodeConfig("g=3090&g2=7900xtx&m=qwen25-7b", DEFAULT_CONFIG)?.gpu2Id, null);
+});
+
+test("old pins with vramBudgetGB are migrated", async () => {
+  const { sanitizePin } = await import("./share.ts");
+  const pin = sanitizePin({ gpuId: "4090", modelId: "qwen25-14b", quantId: "q5", context: 8192, kv: "fp16", useCustomVram: true, vramBudgetGB: 20, ramGB: 64, backend: "ollama" });
+  assert.equal(pin?.vramInput, 20);
+  assert.equal(pin?.gpu2Id, null);
+  assert.equal(sanitizePin({ gpuId: "nope", modelId: "qwen25-14b" }), null);
+});

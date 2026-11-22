@@ -24,13 +24,17 @@
 ## 功能
 
 - **硬體目錄**：6–8 GB 到 96 GB 獨立顯卡（30／40／50 系、3090×2、A6000、PRO 6000、7900 XTX、9070 XT、Arc B580），以及統一記憶體機器（M4 Pro／M4 Max／M3 Ultra、Ryzen AI Max+ 395、DGX Spark）
-- **模型**：Qwen、Llama、Gemma、DeepSeek、Nemotron、Ministral、Phi 等，含 MoE（Scout、V3、Qwen3-A3B）
+- **模型**：Qwen、Llama、Gemma、DeepSeek、Nemotron、Ministral、Phi、gpt-oss、GLM 等 44 個，含 MoE（gpt-oss、GLM-4.5-Air、Scout、V3、Qwen3／Qwen3-Coder A3B）
 - **量化**：Q2、Q3_K_M、IQ4_XS、Q4_K_S、Q4_K_M、Q5、Q6、Q8、FP16
 - **顯存拆開顯示**：完整需求、GPU 實際配置、CPU／RAM 承接、容量缺口
 - **自訂 VRAM**：輸入 4 GB 再載入推薦，容量仍按 4 GB 算；最接近的卡只當速度參考
 - **系統 RAM 與後端**：CPU offload 會看 RAM；統一記憶體機器改用整池容量；vLLM 放不下或在 Mac 上就判定不適合
 - **MoE expert offload**：MoE 放不下時，llama.cpp 用 `--n-cpu-moe` 只把 expert 放 CPU，速度比逐層切分快
 - **Prompt 處理速度**：估算 prefill tok/s 與讀滿 context 要多久，長文件、RAG、agent 用途特別重要
+- **雙卡混搭**：任選同廠牌兩張卡（例如 3090 + 3060），容量相加、`-ts` 依容量比例寫入
+- **系統記憶體類型**：DDR4／DDR5、雙通道到 12 通道，直接影響 CPU 承接時的速度
+- **同時多人**：1／2／4／8 人，KV 依人數相乘，顯示每人與合計速度；指令自動加 `-np`／`OLLAMA_NUM_PARALLEL`／`--max-num-seqs`
+- **對照台**：每組顯示生成、prompt、讀滿時間、需求，並標出與目前設定的百分比差距
 - **分享連結**：網址即設定，例如 `?g=4090&m=gemma3-27b&q=q4km&c=32768`
 - **啟動指令**：`llama-server`（含 `--n-cpu-moe`、多卡 `-ts`）、Ollama（伺服器環境變數 + 官方 tag 或 Modelfile）、vLLM（Hugging Face repo、FP8）；後端不支援的組合會標出來
 - **VRAM 推薦**：最舒服／最大挑戰／也適合，挑戰檔會列出量化、速度、context、記憶體代價
@@ -45,8 +49,8 @@
 | KV cache | `2 × 注意力層 × KV heads × head_dim × context × 每元素位元組 / 1024³`；滑動視窗層（Gemma 3、Llama 4）只算視窗內 token |
 | 完整需求 | 權重 + KV + 開銷（CUDA／compute buffer／ggml） |
 | 容量缺口 | `max(0, 完整需求 − 可用 VRAM)` |
-| 系統 RAM | 約 6 GB 保留 + CPU 承接權重 × 1.15（統一記憶體再加 GPU 配置） |
-| 生成速度 | `1 / (GPU 端權重 ÷ GPU 有效頻寬 + CPU 端權重 ÷ CPU 頻寬 + kernel 開銷)`；MoE 只算 active 參數（routed expert 讀取 × 1.8） |
+| 系統 RAM | 約 6 GB 保留 + CPU 承接權重 × 1.05（統一記憶體再加 GPU 配置） |
+| 生成速度 | `1 / ((GPU 端權重 + KV 讀取) ÷ GPU 有效頻寬 + CPU 端權重 ÷ 系統記憶體頻寬 + kernel 開銷)`；MoE 只算 active 參數（routed expert 讀取 × 1.8） |
 | Prompt 處理 | 有效算力 ÷ (2 × active 參數)；CPU 上的權重每 512 token 經 PCIe 搬一次 |
 
 架構數字來自各模型公開 config。會受後端、CPU、記憶體頻寬、prompt 長度、驅動與是否開 Flash Attention 影響。

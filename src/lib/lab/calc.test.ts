@@ -261,3 +261,53 @@ test("custom VRAM budget never borrows a unified-memory machine as speed referen
   assert.equal(nearestDiscreteGpu(96).unifiedMemGB, undefined);
   assert.equal(nearestDiscreteGpu(128).unifiedMemGB, undefined);
 });
+
+test("faster system memory speeds up CPU offload but not a full fit", async () => {
+  const { MEM_BY_ID } = await import("./gpus.ts");
+  const args = { ...base, gpu: GPU_BY_ID["3090"], model: MODEL_BY_ID["llama33-70b"], ramGB: 128 };
+  const ddr4 = estimate({ ...args, cpuBandwidthGBs: MEM_BY_ID["ddr4-2ch"].bandwidthGBs });
+  const epyc = estimate({ ...args, cpuBandwidthGBs: MEM_BY_ID["ddr5-12ch"].bandwidthGBs });
+  assert.ok(epyc.speedMid > ddr4.speedMid * 3, `${epyc.speedMid} vs ${ddr4.speedMid}`);
+  const fits = { ...base, gpu: GPU_BY_ID["4090"], model: MODEL_BY_ID["llama31-8b"] };
+  assert.equal(
+    estimate({ ...fits, cpuBandwidthGBs: 35 }).speedMid,
+    estimate({ ...fits, cpuBandwidthGBs: 270 }).speedMid,
+  );
+});
+
+test("mixed 3090 + 3060 pools VRAM and splits -ts by capacity", async () => {
+  const { combineGpus } = await import("./gpus.ts");
+  const { launchCommands } = await import("./commands.ts");
+  const pair = combineGpus(GPU_BY_ID["3090"], GPU_BY_ID["3060"]);
+  assert.equal(pair.vramGB, 36);
+  assert.deepEqual(pair.split, [24, 12]);
+  const opts = { ...base, gpu: pair, model: MODEL_BY_ID["llama33-70b"], quant: QUANT_BY_ID.q3km };
+  const fit = estimate(opts);
+  const single = estimate({ ...opts, gpu: GPU_BY_ID["3090"] });
+  assert.ok(fit.gpuLayers > single.gpuLayers);
+  // Slower than a lone 3090 per byte, but far ahead of offloading to CPU.
+  assert.ok(fit.speedMid > single.speedMid);
+  assert.match(launchCommands({ ...opts, backend: "llamacpp", fit }).body, /-ts 24,12/);
+  const vllm = estimate({ ...opts, backend: "vllm" });
+  assert.equal(vllm.vramGB, 24, "vLLM TP only gets 2 × the smaller card");
+});
+
+test("parallel slots multiply KV and raise total but not per-user throughput", async () => {
+  const { launchCommands } = await import("./commands.ts");
+  const opts = { ...base, gpu: GPU_BY_ID["4090"], model: MODEL_BY_ID["qwen25-14b"] };
+  const one = estimate(opts);
+  const four = estimate({ ...opts, parallel: 4 });
+  assert.ok(Math.abs(four.kvGB - one.kvGB * 4) < 0.02);
+  assert.ok(four.speedMid < one.speedMid);
+  assert.ok(four.aggregateTokS > one.aggregateTokS * 2.5);
+  const body = launchCommands({ ...opts, backend: "llamacpp", fit: four }).body;
+  assert.match(body, /-c 32768/);
+  assert.match(body, /-np 4/);
+});
+
+test("decode slows as the context fills because KV is read every token", () => {
+  const opts = { ...base, gpu: GPU_BY_ID.pro6000, model: MODEL_BY_ID["llama31-8b"] };
+  const short = estimate({ ...opts, context: 4096 });
+  const long = estimate({ ...opts, context: 131072 });
+  assert.ok(long.speedMid < short.speedMid * 0.8, `${long.speedMid} vs ${short.speedMid}`);
+});

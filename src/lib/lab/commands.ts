@@ -47,6 +47,10 @@ const TAGS: Record<string, { hf: string; gguf: string; ollama: string }> = {
   "qwen3-32b": { hf: "Qwen/Qwen3-32B", gguf: "Qwen3-32B", ollama: "qwen3:32b" },
   "qwq-32b": { hf: "Qwen/QwQ-32B", gguf: "QwQ-32B", ollama: "qwq:32b" },
   "qwen3-30b-a3b": { hf: "Qwen/Qwen3-30B-A3B", gguf: "Qwen3-30B-A3B", ollama: "qwen3:30b-a3b" },
+  "qwen3-coder-30b-a3b": { hf: "Qwen/Qwen3-Coder-30B-A3B-Instruct", gguf: "Qwen3-Coder-30B-A3B-Instruct", ollama: "qwen3-coder:30b" },
+  "gpt-oss-20b": { hf: "openai/gpt-oss-20b", gguf: "gpt-oss-20b", ollama: "gpt-oss:20b" },
+  "gpt-oss-120b": { hf: "openai/gpt-oss-120b", gguf: "gpt-oss-120b", ollama: "gpt-oss:120b" },
+  "glm-45-air": { hf: "zai-org/GLM-4.5-Air", gguf: "GLM-4.5-Air", ollama: "glm-4.5-air" },
   "qwen3-235b-a22b": { hf: "Qwen/Qwen3-235B-A22B", gguf: "Qwen3-235B-A22B", ollama: "qwen3:235b-a22b" },
   "gemma3-1b": { hf: "google/gemma-3-1b-it", gguf: "gemma-3-1b-it", ollama: "gemma3:1b" },
   "gemma3-4b": { hf: "google/gemma-3-4b-it", gguf: "gemma-3-4b-it", ollama: "gemma3:4b" },
@@ -122,6 +126,7 @@ export function launchCommands(opts: {
   const notes = [...opts.fit.backendNotes];
   const unsupported: string[] = [];
   const kvType = KV_LLAMA[opts.kv];
+  const np = opts.fit.parallel;
 
   let body: string;
 
@@ -129,12 +134,13 @@ export function launchCommands(opts: {
     const lines = [
       `llama-server \\`,
       `  -m ${ggufFile} \\`,
-      `  -c ${opts.context} \\`,
+      `  -c ${opts.context * np} \\`,
       `  -ngl ${ngl} \\`,
     ];
+    if (np > 1) lines.push(`  -np ${np} \\`);
     if (opts.fit.moeOffload) lines.push(`  --n-cpu-moe ${opts.fit.cpuMoeLayers} \\`);
     if (opts.gpu.cards > 1) {
-      const share = Array.from({ length: opts.gpu.cards }, () => 1).join(",");
+      const share = (opts.gpu.split ?? Array.from({ length: opts.gpu.cards }, () => 1)).join(",");
       lines.push(`  -ts ${share} \\`);
     }
     lines.push(`  --flash-attn on \\`);
@@ -142,11 +148,12 @@ export function launchCommands(opts: {
     lines.push(`  --port 8080`);
     body = lines.join("\n");
     notes.push(
-      `已寫入：GPU 層數 ${ngl === 99 ? "全部" : ngl}${opts.fit.moeOffload ? `、${opts.fit.cpuMoeLayers} 層 expert 放 CPU` : ""}、context ${opts.context}、KV ${opts.kv.toUpperCase()}、Flash Attention。`,
+      `已寫入：GPU 層數 ${ngl === 99 ? "全部" : ngl}${opts.fit.moeOffload ? `、${opts.fit.cpuMoeLayers} 層 expert 放 CPU` : ""}、context ${opts.context}${np > 1 ? ` × ${np} 個 slot（-c 是總量）` : ""}、KV ${opts.kv.toUpperCase()}、Flash Attention。`,
     );
     notes.push("llama-server 提供 OpenAI 相容 API（http://localhost:8080/v1）；只想在終端機聊天可把 llama-server 換成 llama-cli。");
   } else if (opts.backend === "ollama") {
     const env = ["OLLAMA_FLASH_ATTENTION=1"];
+    if (np > 1) env.push(`OLLAMA_NUM_PARALLEL=${np}`);
     if (opts.kv !== "fp16") env.push(`OLLAMA_KV_CACHE_TYPE=${kvType}`);
     body = [
       `# 1) 啟動伺服器（Flash Attention、KV 精度是全域設定）`,
@@ -176,6 +183,7 @@ export function launchCommands(opts: {
     if (tp > 1) lines.push(`  --tensor-parallel-size ${tp} \\`);
     if (opts.quant.id === "q8") lines.push(`  --quantization fp8 \\`);
     if (opts.kv === "q8") lines.push(`  --kv-cache-dtype fp8 \\`);
+    if (np > 1) lines.push(`  --max-num-seqs ${np} \\`);
     lines.push(`  --gpu-memory-utilization 0.90`);
     body = lines.join("\n");
     if (opts.gpu.vendor === "apple") {

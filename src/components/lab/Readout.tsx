@@ -1,7 +1,7 @@
 import { formatDuration, formatGB, formatKvTok, formatTok, formatTokS } from "@/lib/lab/calc";
 import { verdictOf } from "@/lib/lab/recommend";
 import { useLabStore } from "@/lib/lab/store";
-import type { BackendId, Fit, Gpu, KvPrecision, Model, Quant } from "@/lib/lab/types";
+import type { BackendId, EstimateInput, Fit, Gpu, KvPrecision, Model, Quant } from "@/lib/lab/types";
 import { cn } from "@/lib/utils";
 import { CompareBench } from "./CompareBench";
 import { ContextCurve } from "./ContextCurve";
@@ -20,6 +20,7 @@ export function Readout({
   fit,
   vramGB,
   useCustomVram,
+  input,
 }: {
   gpu: Gpu;
   model: Model;
@@ -29,6 +30,7 @@ export function Readout({
   fit: Fit;
   vramGB: number;
   useCustomVram: boolean;
+  input: EstimateInput;
 }) {
   const applyAction = useLabStore((s) => s.applyAction);
   const setContext = useLabStore((s) => s.setContext);
@@ -63,6 +65,7 @@ export function Readout({
         <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted">
           {useCustomVram ? `自訂 ${vramGB} GB` : gpu.shortName} · {model.name} · {quant.label} ·{" "}
           {formatTok(context)}
+          {fit.parallel > 1 ? ` × ${fit.parallel} 人` : ""}
           {model.kind !== "dense" ? ` · ${model.kind.toUpperCase()}` : ""}
         </p>
         <p className="mt-1 text-sm text-fg">{offloadLabel}</p>
@@ -84,7 +87,13 @@ export function Readout({
         <Stat
           label="預估速度"
           value={`${fit.speedLow}–${fit.speedHigh}`}
-          hint={useCustomVram ? `tok/s · 參考 ${gpu.shortName}` : "tok/s · 估計"}
+          hint={
+            fit.parallel > 1
+              ? `tok/s 每人 · ${fit.parallel} 人合計約 ${fit.aggregateTokS}`
+              : useCustomVram
+                ? `tok/s · 參考 ${gpu.shortName}`
+                : "tok/s · 估計"
+          }
           accent
         />
         <Stat
@@ -146,17 +155,7 @@ export function Readout({
       <CompareBench />
 
       <section className="rounded-lg bg-bg-elevated p-4 shadow-border sm:p-5">
-        <ContextCurve
-          gpu={gpu}
-          model={model}
-          quant={quant}
-          kv={kv}
-          context={context}
-          vramGB={vramGB}
-          ramGB={fit.ramGB}
-          backend={backend}
-          usableGB={fit.usableGB}
-        />
+        <ContextCurve input={input} usableGB={fit.usableGB} />
       </section>
 
       {fit.suggestions.length > 0 ? (

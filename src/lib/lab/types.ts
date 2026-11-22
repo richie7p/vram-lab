@@ -6,6 +6,8 @@ export type Family =
   | "nemotron"
   | "ministral"
   | "phi"
+  | "gptoss"
+  | "glm"
   | "other";
 
 export type QuantId =
@@ -57,6 +59,16 @@ export type GpuGroupId = "entry" | "12" | "16" | "24" | "work" | "unified";
 
 export type GpuVendor = "nvidia" | "amd" | "intel" | "apple";
 
+export type MemProfileId = "ddr4-2ch" | "ddr5-2ch" | "ddr5-4ch" | "ddr5-8ch" | "ddr5-12ch";
+
+export type MemProfile = {
+  id: MemProfileId;
+  label: string;
+  /** Effective bandwidth llama.cpp gets from CPU-resident weights (not the spec number). */
+  bandwidthGBs: number;
+  hint: string;
+};
+
 export type Gpu = {
   id: GpuId;
   name: string;
@@ -78,6 +90,8 @@ export type Gpu = {
   unifiedMemGB?: number;
   /** CPU-side memory bandwidth used for offloaded weights (default: desktop DDR5). */
   cpuBandwidthGBs?: number;
+  /** Per-card VRAM for mixed multi-GPU combos; drives llama.cpp -ts. */
+  split?: number[];
   note: string;
   group: GpuGroupId;
 };
@@ -128,18 +142,23 @@ export type Suggestion = {
   actionLabel?: string;
 };
 
-export type Pin = {
-  id: string;
+export type LabConfig = {
   gpuId: GpuId;
-  useCustomVram: boolean;
-  vramBudgetGB: number;
-  ramGB: number;
-  backend: BackendId;
+  /** Optional second card for a mixed pair. */
+  gpu2Id: GpuId | null;
   modelId: string;
   quantId: QuantId;
   context: number;
   kv: KvPrecision;
+  ramGB: number;
+  memId: MemProfileId;
+  parallel: number;
+  backend: BackendId;
+  useCustomVram: boolean;
+  vramInput: number;
 };
+
+export type Pin = LabConfig & { id: string };
 
 export type EstimateInput = {
   gpu: Gpu;
@@ -150,6 +169,10 @@ export type EstimateInput = {
   vramGB?: number;
   ramGB?: number;
   backend?: BackendId;
+  /** System memory bandwidth for CPU-offloaded weights; ignored on unified-memory machines. */
+  cpuBandwidthGBs?: number;
+  /** Concurrent sequences (llama-server -np, OLLAMA_NUM_PARALLEL, vLLM max-num-seqs). */
+  parallel?: number;
 };
 
 export type Fit = {
@@ -186,6 +209,10 @@ export type Fit = {
   speedLow: number;
   speedHigh: number;
   speedMid: number;
+  /** Concurrent sequences; speedLow/Mid/High are per sequence. */
+  parallel: number;
+  /** Total tok/s across all sequences. */
+  aggregateTokS: number;
   /** Prompt processing (prefill) tok/s, averaged over filling the context. */
   prefillTokS: number;
   /** Seconds to read a prompt that fills the whole context. */

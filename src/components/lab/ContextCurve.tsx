@@ -1,36 +1,18 @@
-import { estimate, formatGB, formatTok } from "@/lib/lab/calc";
-import type { BackendId, Gpu, KvPrecision, Model, Quant } from "@/lib/lab/types";
+import { estimateQuick, formatGB, formatTok } from "@/lib/lab/calc";
+import type { EstimateInput } from "@/lib/lab/types";
 
 const STEPS = [2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144];
 const W = 100;
 const H = 40;
 
-export function ContextCurve({
-  gpu,
-  model,
-  quant,
-  kv,
-  context,
-  vramGB,
-  ramGB,
-  backend,
-  usableGB,
-}: {
-  gpu: Gpu;
-  model: Model;
-  quant: Quant;
-  kv: KvPrecision;
-  context: number;
-  vramGB: number;
-  ramGB: number;
-  backend: BackendId;
-  usableGB: number;
-}) {
+export function ContextCurve({ input, usableGB }: { input: EstimateInput; usableGB: number }) {
+  const { model, context } = input;
+  const vramGB = input.vramGB ?? input.gpu.vramGB;
   const steps = STEPS.filter((c) => c <= model.maxCtx);
   if (steps.length < 2) return null;
 
   const demandAt = (c: number) =>
-    estimate({ gpu, model, quant, context: c, kv, vramGB, ramGB, backend }).demandGB;
+    estimateQuick({ ...input, context: c }).demandGB;
   const points = steps.map((c) => ({ c, total: demandAt(c) }));
   const nowCtx = Math.min(Math.max(context, steps[0]), steps[steps.length - 1]);
   const nowTotal = demandAt(nowCtx);

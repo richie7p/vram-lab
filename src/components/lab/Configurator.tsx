@@ -1,10 +1,11 @@
-import { budgetVramGB, estimate, formatTok } from "@/lib/lab/calc";
+import { estimateQuick, formatTok } from "@/lib/lab/calc";
 import { BACKENDS } from "@/lib/lab/commands";
-import { GPUS, GPU_BY_ID, GPU_GROUPS } from "@/lib/lab/gpus";
+import { GPUS, GPU_BY_ID, GPU_GROUPS, MEM_PROFILES, secondCardOptions } from "@/lib/lab/gpus";
 import { FAMILIES, MODEL_BY_ID, MODELS } from "@/lib/lab/models";
 import { QUANTS } from "@/lib/lab/quants";
 import { verdictOf } from "@/lib/lab/recommend";
-import { useLabStore } from "@/lib/lab/store";
+import { PARALLEL_OPTIONS, estimateInput } from "@/lib/lab/share";
+import { useLabConfig, useLabStore } from "@/lib/lab/store";
 import type { KvPrecision } from "@/lib/lab/types";
 import { cn } from "@/lib/utils";
 import { useMemo, useState, type ReactNode } from "react";
@@ -39,14 +40,22 @@ export function Configurator() {
   const setUseCustomVram = useLabStore((s) => s.setUseCustomVram);
   const setRam = useLabStore((s) => s.setRam);
   const setBackend = useLabStore((s) => s.setBackend);
+  const gpu2Id = useLabStore((s) => s.gpu2Id);
+  const setGpu2 = useLabStore((s) => s.setGpu2);
+  const memId = useLabStore((s) => s.memId);
+  const setMem = useLabStore((s) => s.setMem);
+  const parallel = useLabStore((s) => s.parallel);
+  const setParallel = useLabStore((s) => s.setParallel);
+  const config = useLabConfig();
   const [query, setQuery] = useState("");
 
-  const gpu = GPU_BY_ID[gpuId] ?? GPUS[0];
-  const quant = QUANTS.find((q) => q.id === quantId) ?? QUANTS[4];
+  const primary = GPU_BY_ID[gpuId] ?? GPUS[0];
+  const base = useMemo(() => estimateInput(config), [config]);
+  const gpu = base.gpu;
+  const pairOptions = secondCardOptions(primary);
   const selected = MODEL_BY_ID[modelId];
   const family = selected?.family ?? tabFamily;
   const maxCtx = selected?.maxCtx ?? 131072;
-  const vramGB = budgetVramGB(gpu, useCustomVram, vramInput);
 
   const models = useMemo(() => {
     const list = MODELS.filter((m) => m.family === family);
@@ -100,6 +109,24 @@ export function Configurator() {
             );
           })}
         </div>
+        {pairOptions.length > 0 ? (
+          <label className="flex flex-wrap items-center gap-2 rounded-md bg-surface px-3 py-2 shadow-border">
+            <span className="text-xs text-muted">第二張卡</span>
+            <select
+              value={gpu2Id ?? ""}
+              onChange={(e) => setGpu2((e.target.value || null) as typeof gpu2Id)}
+              className="min-h-9 min-w-0 flex-1 rounded-md bg-bg px-2 text-sm text-fg shadow-border outline-none"
+              aria-label="第二張顯卡"
+            >
+              <option value="">不加（單卡）</option>
+              {pairOptions.map((g) => (
+                <option key={g.id} value={g.id}>
+                  + {g.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <p className="text-xs leading-relaxed text-muted">{gpu.note}</p>
       </Section>
 
@@ -143,16 +170,7 @@ export function Configurator() {
           ) : (
             models.map((m) => {
               const on = m.id === modelId;
-              const fit = estimate({
-                gpu,
-                model: m,
-                quant,
-                context,
-                kv,
-                vramGB,
-                ramGB,
-                backend,
-              });
+              const fit = estimateQuick({ ...base, model: m, context: Math.min(context, m.maxCtx) });
               const v = verdictOf(fit.verdict);
               return (
                 <button
@@ -187,19 +205,7 @@ export function Configurator() {
         <div className="grid grid-cols-3 gap-1.5">
           {QUANTS.map((q) => {
             const on = q.id === quantId;
-            const qFit =
-              selected && gpu
-                ? estimate({
-                    gpu,
-                    model: selected,
-                    quant: q,
-                    context,
-                    kv,
-                    vramGB,
-                    ramGB,
-                    backend,
-                  })
-                : null;
+            const qFit = selected ? estimateQuick({ ...base, quant: q }) : null;
             const tone = qFit ? verdictOf(qFit.verdict).tone : "idle";
             return (
               <button
@@ -219,7 +225,7 @@ export function Configurator() {
             );
           })}
         </div>
-        <p className="text-xs leading-relaxed text-muted">{quant.qualityNote}</p>
+        <p className="text-xs leading-relaxed text-muted">{base.quant.qualityNote}</p>
       </Section>
 
       <Section kicker="04" title="Context">
@@ -329,6 +335,50 @@ export function Configurator() {
                 )}
               >
                 {n} GB
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs text-subtle">記憶體類型（決定 CPU 承接的速度）</p>
+          <div className="flex flex-wrap gap-1.5">
+            {MEM_PROFILES.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                title={`${m.hint} · 約 ${m.bandwidthGBs} GB/s 有效頻寬`}
+                disabled={Boolean(gpu.unifiedMemGB)}
+                onClick={() => setMem(m.id)}
+                aria-pressed={memId === m.id}
+                className={cn(
+                  "min-h-9 rounded-full px-3 text-xs font-medium disabled:opacity-40",
+                  memId === m.id
+                    ? "bg-fg text-bg"
+                    : "bg-surface text-muted shadow-border hover:text-fg",
+                )}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs text-subtle">同時使用人數（每人各自一份 context）</p>
+          <div className="flex flex-wrap gap-1.5">
+            {PARALLEL_OPTIONS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setParallel(n)}
+                aria-pressed={parallel === n}
+                className={cn(
+                  "min-h-9 rounded-full px-3 font-mono text-xs tabular-nums",
+                  parallel === n
+                    ? "bg-fg text-bg"
+                    : "bg-surface text-muted shadow-border hover:text-fg",
+                )}
+              >
+                {n === 1 ? "1 人" : `${n} 人`}
               </button>
             ))}
           </div>

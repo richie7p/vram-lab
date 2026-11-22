@@ -1,11 +1,8 @@
-import { budgetVramGB, estimate } from "@/lib/lab/calc";
-import { GPU_BY_ID } from "@/lib/lab/gpus";
+import { estimate } from "@/lib/lab/calc";
 import { DATA_AS_OF } from "@/lib/lab/method";
-import { MODEL_BY_ID } from "@/lib/lab/models";
-import { QUANT_BY_ID } from "@/lib/lab/quants";
 import { verdictOf } from "@/lib/lab/recommend";
-import { decodeConfig, encodeConfig, pickConfig } from "@/lib/lab/share";
-import { useLabStore, type LabMode } from "@/lib/lab/store";
+import { decodeConfig, encodeConfig, estimateInput, pickConfig } from "@/lib/lab/share";
+import { useLabConfig, useLabStore, type LabMode } from "@/lib/lab/store";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Configurator } from "./Configurator";
@@ -38,25 +35,12 @@ export function LabApp() {
   useUrlSync();
   const mode = useLabStore((s) => s.mode);
   const setMode = useLabStore((s) => s.setMode);
-  const gpuId = useLabStore((s) => s.gpuId);
-  const modelId = useLabStore((s) => s.modelId);
-  const quantId = useLabStore((s) => s.quantId);
-  const context = useLabStore((s) => s.context);
-  const kv = useLabStore((s) => s.kv);
-  const useCustomVram = useLabStore((s) => s.useCustomVram);
-  const vramInput = useLabStore((s) => s.vramInput);
-  const ramGB = useLabStore((s) => s.ramGB);
-  const backend = useLabStore((s) => s.backend);
-
-  const gpu = GPU_BY_ID[gpuId] ?? GPU_BY_ID["3060"];
-  const model = MODEL_BY_ID[modelId];
-  const quant = QUANT_BY_ID[quantId];
-  const vramGB = budgetVramGB(gpu, useCustomVram, vramInput);
-
-  const fit = useMemo(() => {
-    if (!gpu || !model || !quant) return null;
-    return estimate({ gpu, model, quant, context, kv, vramGB, ramGB, backend });
-  }, [gpu, model, quant, context, kv, vramGB, ramGB, backend]);
+  const config = useLabConfig();
+  const input = useMemo(() => estimateInput(config), [config]);
+  const { gpu, model, quant, context, kv } = input;
+  const vramGB = input.vramGB ?? gpu.vramGB;
+  const useCustomVram = config.useCustomVram;
+  const fit = useMemo(() => estimate(input), [input]);
 
   const v = fit ? verdictOf(fit.verdict) : null;
 
@@ -114,6 +98,7 @@ export function LabApp() {
             fit={fit}
             vramGB={vramGB}
             useCustomVram={useCustomVram}
+            input={input}
           />
         </main>
       ) : (

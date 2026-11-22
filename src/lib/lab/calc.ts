@@ -73,7 +73,7 @@ export function overheadGB(vramGB: number, model: Model, context: number): numbe
 }
 
 /** Desktop dual-channel DDR5, effective bandwidth for CPU-resident weights. */
-export const CPU_BANDWIDTH_GBS = 50;
+export const CPU_BANDWIDTH_GBS = 55;
 /** PCIe 4.0 x16 effective; offloaded weights are streamed per ubatch during prefill. */
 const PCIE_GBS = 24;
 const UBATCH = 512;
@@ -162,16 +162,27 @@ function estimateCore(opts: EstimateInput): CoreFit {
   const backend: BackendId = opts.backend ?? "llamacpp";
   const unified = Boolean(gpu.unifiedMemGB);
   const ramGB = unified ? gpu.unifiedMemGB! : clamp(opts.ramGB ?? 32, 4, 512);
-  const vramGB = Math.max(2, opts.vramGB ?? gpu.vramGB);
+  let vramGB = Math.max(2, opts.vramGB ?? gpu.vramGB);
+  // vLLM tensor parallel shards evenly, so a mixed pair only gets 2 × the smaller card.
+  const uneven = gpu.split && Math.min(...gpu.split) !== Math.max(...gpu.split);
+  if (backend === "vllm" && uneven && (opts.vramGB ?? gpu.vramGB) === gpu.vramGB) {
+    vramGB = Math.min(...gpu.split!) * gpu.split!.length;
+  }
   const context = clamp(Math.round(opts.context), 512, model.maxCtx);
+  const parallel = clamp(Math.round(opts.parallel ?? 1), 1, 16);
   const usable = usableVramGB(vramGB, gpu.cards);
   const weights = weightsGB(model, quant);
-  const kvGB = kvCacheGB(model, context, opts.kv);
+  // Each concurrent slot keeps its own full-length KV.
+  const kvSlotGB = kvCacheGB(model, context, opts.kv);
+  const kvGB = kvSlotGB * parallel;
   const overhead = overheadGB(vramGB, model, context);
   const demand = weights + kvGB + overhead;
   const perLayer = weights / Math.max(model.layers, 1);
 
   const notes = backendNotes(backend, opts.kv, quant, gpu);
+  if (backend === "vllm" && uneven) {
+    notes.push(`vLLM 張量並行平均切分，混搭雙卡只能用 2 × ${Math.min(...gpu.split!)}GB = ${vramGB}GB。`);
+  }
   const vllmStrict = backend === "vllm";
   const vllmBlocked = vllmStrict && gpu.vendor === "apple";
 
@@ -224,14 +235,16 @@ function estimateCore(opts: EstimateInput): CoreFit {
   // Unified memory: GPU allocations come out of the same pool as the OS.
   const ramNeed =
     6 +
-    cpuOffloadGB * 1.15 +
+    cpuOffloadGB * 1.05 +
     Math.min(context / 8192, 3) * 0.35 +
     (unified ? gpuPlaced : 0);
   const ramOk = ramGB + 0.25 >= ramNeed;
 
   // ---- decode speed: time per token = GPU bytes / GPU bw + CPU bytes / CPU bw
   const gpuBw = Math.max(gpu.bandwidthGBs * gpu.decodeEfficiency, 1);
-  const cpuBw = gpu.cpuBandwidthGBs ?? CPU_BANDWIDTH_GBS;
+  const cpuBw = unified
+    ? (gpu.cpuBandwidthGBs ?? CPU_BANDWIDTH_GBS)
+    : (opts.cpuBandwidthGBs ?? gpu.cpuBandwidthGBs ?? CPU_BANDWIDTH_GBS);
   const kernelSeconds = gpu.kernelMs / 1000;
   const decodeGB = decodeBytesGB(model, quant);
   let gpuReadGB = decodeGB;
@@ -246,8 +259,16 @@ function estimateCore(opts: EstimateInput): CoreFit {
     gpuReadGB = decodeGB * gpuFrac;
     cpuReadGB = decodeGB * (1 - gpuFrac);
   }
-  const kernelScale = moeOffload ? 1.4 : 1;
-  let mid = 1 / (gpuReadGB / gpuBw + cpuReadGB / cpuBw + kernelSeconds * kernelScale);
+  // Every decoded token also reads its sequence's KV (half full on average);
+  // batched slots share the weight read but each reads its own KV.
+  const kvReadGB = kvSlotGB * 0.5 * parallel;
+  const kvGpuFrac = fullOffload || moeOffload ? 1 : gpuLayers / model.layers;
+  const kernelScale = (moeOffload ? 1.4 : 1) * (1 + 0.1 * (parallel - 1));
+  const stepSeconds =
+    (gpuReadGB + kvReadGB * kvGpuFrac) / gpuBw +
+    (cpuReadGB + kvReadGB * (1 - kvGpuFrac)) / cpuBw +
+    kernelSeconds * kernelScale;
+  let mid = 1 / stepSeconds;
   if (!fullOffload && vllmStrict) mid *= 0.02;
   if (!ramOk && cpuOffloadGB > 0) mid *= 0.35;
   const speed = speedRange(mid);
@@ -337,12 +358,21 @@ function estimateCore(opts: EstimateInput): CoreFit {
     speedLow: speed.low,
     speedHigh: speed.high,
     speedMid: speed.mid,
+    parallel,
+    aggregateTokS: Math.round(speed.mid * parallel),
     prefillTokS,
     fillSec,
     unified,
     kvBytesPerToken: kvBytesPerTokenAt(model, context, opts.kv),
     qualityCap,
   };
+}
+
+export type QuickFit = CoreFit;
+
+/** Fit without suggested context or suggestions: for lists, curves and LEDs. */
+export function estimateQuick(opts: EstimateInput): QuickFit {
+  return estimateCore(opts);
 }
 
 export function estimate(opts: EstimateInput): Fit {
@@ -490,7 +520,9 @@ function buildSuggestions(
 
   if (gpu.cards > 1) {
     out.push({
-      text: "雙卡速度不是 2 倍。PCIe tensor split 通常約 1.5–1.8× 單卡。",
+      text: gpu.split
+        ? `雙卡 layer split 是兩張卡輪流算，不會變 2 倍快；好處是容量相加（${gpu.split.join(" + ")} GB）。`
+        : "雙卡速度不是 2 倍。PCIe tensor split 通常約 1.5–1.8× 單卡。",
     });
   }
 
@@ -556,19 +588,4 @@ export function formatKvTok(bytes: number): string {
   const kib = bytes / 1024;
   if (kib >= 100) return `${Math.round(kib)} KiB/tok`;
   return `${kib.toFixed(1)} KiB/tok`;
-}
-
-export function pinId(p: {
-  gpuId: string;
-  useCustomVram?: boolean;
-  vramBudgetGB?: number;
-  ramGB?: number;
-  backend?: string;
-  modelId: string;
-  quantId: string;
-  context: number;
-  kv: string;
-}): string {
-  const vram = p.useCustomVram ? `c${p.vramBudgetGB}` : "gpu";
-  return `${p.gpuId}|${vram}|${p.ramGB ?? 32}|${p.backend ?? "llamacpp"}|${p.modelId}|${p.quantId}|${p.context}|${p.kv}`;
 }

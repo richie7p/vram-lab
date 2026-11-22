@@ -1,4 +1,4 @@
-import type { Gpu, GpuGroupId, GpuId } from "./types";
+import type { Gpu, GpuGroupId, GpuId, MemProfile, MemProfileId } from "./types";
 
 export const GPU_GROUPS: { id: GpuGroupId; label: string }[] = [
   { id: "entry", label: "6–8 GB" },
@@ -447,4 +447,66 @@ export function nearestDiscreteGpu(vramGB: number): Gpu {
   return [...GPUS]
     .filter((g) => !g.unifiedMemGB)
     .sort((a, b) => Math.abs(a.vramGB - vramGB) - Math.abs(b.vramGB - vramGB))[0];
+}
+
+export const MEM_PROFILES: MemProfile[] = [
+  { id: "ddr4-2ch", label: "DDR4 雙通道", bandwidthGBs: 35, hint: "AM4／12–14 代 Intel 常見" },
+  { id: "ddr5-2ch", label: "DDR5 雙通道", bandwidthGBs: 55, hint: "AM5／Intel 新平台" },
+  { id: "ddr5-4ch", label: "DDR5 四通道", bandwidthGBs: 110, hint: "Threadripper／Xeon W" },
+  { id: "ddr5-8ch", label: "DDR5 八通道", bandwidthGBs: 190, hint: "Threadripper PRO／伺服器" },
+  { id: "ddr5-12ch", label: "DDR5 12 通道", bandwidthGBs: 270, hint: "EPYC 9004 以上" },
+];
+
+export const MEM_BY_ID: Record<MemProfileId, MemProfile> = Object.fromEntries(
+  MEM_PROFILES.map((m) => [m.id, m]),
+) as Record<MemProfileId, MemProfile>;
+
+/** Single discrete cards that can pair with `primary` (same vendor, so one backend drives both). */
+export function secondCardOptions(primary: Gpu): Gpu[] {
+  if (primary.unifiedMemGB || primary.cards > 1) return [];
+  return GPUS.filter((g) => !g.unifiedMemGB && g.cards === 1 && g.vendor === primary.vendor);
+}
+
+export function canPair(primaryId: GpuId, secondId: GpuId | null | undefined): boolean {
+  if (!secondId) return false;
+  const a = GPU_BY_ID[primaryId];
+  const b = GPU_BY_ID[secondId];
+  return Boolean(a && b && secondCardOptions(a).some((g) => g.id === b.id));
+}
+
+/**
+ * Two cards under llama.cpp layer split: layers go in proportion to VRAM and run
+ * one after another, so per-token time is the VRAM-weighted sum over both cards.
+ */
+export function combineGpus(a: Gpu, b: Gpu): Gpu {
+  const total = a.vramGB + b.vramGB;
+  const fa = a.vramGB / total;
+  const fb = b.vramGB / total;
+  const effBw = 0.92 / (fa / (a.bandwidthGBs * a.decodeEfficiency) + fb / (b.bandwidthGBs * b.decodeEfficiency));
+  const bandwidthGBs = a.bandwidthGBs + b.bandwidthGBs;
+  const same = a.id === b.id;
+  return {
+    ...a,
+    name: same ? `${a.name} ×2` : `${a.name} + ${b.name}`,
+    shortName: same ? `${a.shortName}×2` : `${a.shortName}+${b.shortName}`,
+    vramGB: total,
+    bandwidthGBs,
+    decodeEfficiency: effBw / bandwidthGBs,
+    kernelMs: Math.max(a.kernelMs, b.kernelMs) + 0.25,
+    ppTflops: 0.9 / (fa / a.ppTflops + fb / b.ppTflops),
+    tdpW: a.tdpW + b.tdpW,
+    arch: a.arch === b.arch ? `${a.arch} ×2` : `${a.arch} + ${b.arch}`,
+    cards: 2,
+    split: [a.vramGB, b.vramGB],
+    note: same
+      ? `兩張 ${a.shortName} 以 layer split 合用 ${total}GB。速度不是 2 倍：兩張卡輪流算各自的層。`
+      : `混搭 ${a.shortName}（${a.vramGB}GB）+ ${b.shortName}（${b.vramGB}GB）。層數按容量分配，速度會被較慢的那張拖住。`,
+  };
+}
+
+/** The effective device for a config: one card, a catalog preset, or a mixed pair. */
+export function resolveGpu(gpuId: GpuId, gpu2Id?: GpuId | null): Gpu {
+  const a = GPU_BY_ID[gpuId] ?? GPU_BY_ID["3060"];
+  if (gpu2Id && canPair(a.id, gpu2Id)) return combineGpus(a, GPU_BY_ID[gpu2Id]);
+  return a;
 }

@@ -20,11 +20,13 @@ export function VramMeter({ fit }: { fit: Fit }) {
           hint={
             fit.fullOffload
               ? "全部在 GPU"
-              : `${fit.gpuLayers}/${fit.totalLayers} 層`
+              : fit.moeOffload
+                ? `注意力全在 GPU · ${fit.totalLayers - fit.cpuMoeLayers}/${fit.totalLayers} 層 expert`
+                : `${fit.gpuLayers}/${fit.totalLayers} 層`
           }
         />
         <Metric
-          label="CPU／RAM 承接"
+          label={fit.unified ? "CPU 承接（同一記憶體）" : "CPU／RAM 承接"}
           value={fit.cpuOffloadGB > 0.05 ? formatGB(fit.cpuOffloadGB) : "0"}
           hint={`估需 RAM ${formatGB(fit.ramNeedGB)} · 你有 ${formatGB(fit.ramGB)}`}
           warn={!fit.ramOk && fit.cpuOffloadGB > 0}

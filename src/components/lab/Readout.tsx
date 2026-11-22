@@ -1,10 +1,11 @@
-import { formatGB, formatKvTok, formatTok } from "@/lib/lab/calc";
+import { formatDuration, formatGB, formatKvTok, formatTok, formatTokS } from "@/lib/lab/calc";
 import { verdictOf } from "@/lib/lab/recommend";
 import { useLabStore } from "@/lib/lab/store";
 import type { BackendId, Fit, Gpu, KvPrecision, Model, Quant } from "@/lib/lab/types";
 import { cn } from "@/lib/utils";
 import { CompareBench } from "./CompareBench";
 import { ContextCurve } from "./ContextCurve";
+import { CopyButton } from "./CopyButton";
 import { EstimateBasis } from "./EstimateBasis";
 import { LaunchCommands } from "./LaunchCommands";
 import { Led } from "./Led";
@@ -36,10 +37,12 @@ export function Readout({
   const v = verdictOf(fit.verdict);
   const offloadLabel = fit.fullOffload
     ? "完整 GPU offload"
-    : `需 CPU offload · ${fit.gpuLayers}/${fit.totalLayers} 層在 GPU`;
+    : fit.moeOffload
+      ? `MoE expert offload · ${fit.cpuMoeLayers}/${fit.totalLayers} 層的 expert 在 CPU`
+      : `需 CPU offload · ${fit.gpuLayers}/${fit.totalLayers} 層在 GPU`;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <section
         className={cn(
           "rounded-lg p-5 shadow-border",
@@ -49,9 +52,10 @@ export function Readout({
           v.tone === "bad" && "bg-bad-dim/30",
         )}
       >
-        <p className="mb-2 text-xs font-medium tracking-wide text-muted uppercase">
-          判定
-        </p>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-xs font-medium tracking-wide text-muted uppercase">判定</p>
+          <CopyButton text={() => window.location.href} label="複製分享連結" />
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <Led tone={v.tone} className="size-3" />
           <h2 className="text-2xl font-medium tracking-tight text-fg">{v.label}</h2>
@@ -84,22 +88,34 @@ export function Readout({
           accent
         />
         <Stat
-          label="系統 RAM"
+          label={fit.unified ? "統一記憶體" : "系統 RAM"}
           value={fit.ramOk ? "夠用" : "不足"}
           hint={`${formatGB(fit.ramNeedGB)} 估需 / ${formatGB(fit.ramGB)}`}
         />
       </section>
 
-      <section className="grid gap-2 sm:grid-cols-3">
+      <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <Stat
+          label="Prompt 處理"
+          value={`${formatTokS(fit.prefillTokS)}`}
+          hint={`tok/s · 讀滿 ${formatTok(context)} 約 ${formatDuration(fit.fillSec)}`}
+        />
         <Stat
           label="GPU 層數"
-          value={fit.fullOffload ? "全部" : `${fit.gpuLayers}/${fit.totalLayers}`}
-          hint={fit.fullOffload ? "無需 CPU" : `CPU 承接 ${formatGB(fit.cpuOffloadGB)}`}
+          value={fit.fullOffload || fit.moeOffload ? "全部" : `${fit.gpuLayers}/${fit.totalLayers}`}
+          hint={
+            fit.fullOffload
+              ? "無需 CPU"
+              : fit.moeOffload
+                ? `expert ${formatGB(fit.cpuOffloadGB)} 在 CPU`
+                : `CPU 承接 ${formatGB(fit.cpuOffloadGB)}`
+          }
         />
         <button
           type="button"
           onClick={() => setContext(fit.suggestedCtx)}
           className="rounded-md bg-bg-elevated px-3 py-3 text-left shadow-border transition-transform duration-150 active:scale-[0.99]"
+          aria-label={`套用建議 context ${formatTok(fit.suggestedCtx)}`}
         >
           <p className="text-xs text-muted">建議 context</p>
           <p className="mt-1 font-mono text-lg font-medium tabular-nums tracking-tight text-fg">
@@ -139,6 +155,7 @@ export function Readout({
           vramGB={vramGB}
           ramGB={fit.ramGB}
           backend={backend}
+          usableGB={fit.usableGB}
         />
       </section>
 

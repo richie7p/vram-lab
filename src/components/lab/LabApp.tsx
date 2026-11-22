@@ -4,15 +4,38 @@ import { DATA_AS_OF } from "@/lib/lab/method";
 import { MODEL_BY_ID } from "@/lib/lab/models";
 import { QUANT_BY_ID } from "@/lib/lab/quants";
 import { verdictOf } from "@/lib/lab/recommend";
+import { decodeConfig, encodeConfig, pickConfig } from "@/lib/lab/share";
 import { useLabStore, type LabMode } from "@/lib/lab/store";
 import { cn } from "@/lib/utils";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Configurator } from "./Configurator";
 import { Led } from "./Led";
 import { Readout } from "./Readout";
 import { RecommendPanel } from "./RecommendPanel";
 
+/** Load a config from ?g=…&m=… once, then keep the address bar in sync so it is always shareable. */
+function useUrlSync() {
+  useEffect(() => {
+    const store = useLabStore;
+    const fromUrl = decodeConfig(window.location.search, pickConfig(store.getState()));
+    if (fromUrl) store.getState().applyConfig(fromUrl);
+
+    const sync = () => {
+      const s = store.getState();
+      if (s.mode !== "lab") return;
+      const next = `${window.location.pathname}?${encodeConfig(pickConfig(s))}${window.location.hash}`;
+      const now = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (next !== now) window.history.replaceState(window.history.state, "", next);
+    };
+    sync();
+    // Lets tests (and anything else) know the client has taken over.
+    document.documentElement.dataset.labReady = "1";
+    return store.subscribe(sync);
+  }, []);
+}
+
 export function LabApp() {
+  useUrlSync();
   const mode = useLabStore((s) => s.mode);
   const setMode = useLabStore((s) => s.setMode);
   const gpuId = useLabStore((s) => s.gpuId);
@@ -79,7 +102,7 @@ export function LabApp() {
 
       {mode === "lab" && gpu && model && quant && fit ? (
         <main className="mx-auto grid w-full max-w-7xl items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(18rem,22rem)_1fr] lg:gap-6 lg:py-6">
-          <div className="lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:pr-1">
+          <div className="min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:pr-1">
             <Configurator />
           </div>
           <Readout

@@ -206,3 +206,58 @@ test("Qwen3-30B-A3B decodes far faster than a dense model of the same file size"
   assert.ok(moe.speedMid > 120 && moe.speedMid < 260, `got ${moe.speedMid}`);
   assert.ok(moe.speedMid > dense.speedMid * 3);
 });
+
+const base = { quant: QUANT_BY_ID.q4km, context: 8192, kv: "fp16" as const };
+
+test("MoE that does not fit uses expert offload on llama.cpp", () => {
+  const fit = estimate({ ...base, gpu: GPU_BY_ID["3060"], model: MODEL_BY_ID["qwen3-30b-a3b"] });
+  assert.equal(fit.fullOffload, false);
+  assert.equal(fit.moeOffload, true);
+  assert.equal(fit.gpuLayers, fit.totalLayers);
+  assert.ok(fit.cpuMoeLayers > 0 && fit.cpuMoeLayers < fit.totalLayers);
+  assert.ok(fit.gpuPlacedGB <= fit.usableGB + 0.01);
+  assert.ok(fit.speedLow >= 15, `got ${fit.speedLow}`);
+  assert.notEqual(fit.verdict, "no");
+});
+
+test("expert offload beats Ollama's layer split for the same MoE", () => {
+  const args = { ...base, gpu: GPU_BY_ID["3060"], model: MODEL_BY_ID["qwen3-30b-a3b"] };
+  const moe = estimate({ ...args, backend: "llamacpp" });
+  const split = estimate({ ...args, backend: "ollama" });
+  assert.equal(split.moeOffload, false);
+  assert.ok(moe.speedMid > split.speedMid);
+  assert.ok(split.suggestions.some((s) => s.action?.kind === "backend"));
+});
+
+test("dense partial offload speed is bounded by CPU bandwidth", () => {
+  const fit = estimate({ ...base, gpu: GPU_BY_ID["3090"], model: MODEL_BY_ID["llama33-70b"], ramGB: 64 });
+  assert.equal(fit.fullOffload, false);
+  assert.ok(fit.speedMid > 1.5 && fit.speedMid < 4, `got ${fit.speedMid}`);
+});
+
+test("prefill is far faster than decode and slows with CPU offload", () => {
+  const gpu = GPU_BY_ID["4090"];
+  const full = estimate({ ...base, gpu, model: MODEL_BY_ID["llama31-8b"] });
+  assert.ok(full.prefillTokS > full.speedMid * 30);
+  assert.ok(full.fillSec < 2);
+  const off = estimate({ ...base, gpu, model: MODEL_BY_ID["llama33-70b"], ramGB: 64 });
+  assert.ok(off.prefillTokS < 1000, `got ${off.prefillTokS}`);
+});
+
+test("Apple Silicon: unified memory replaces the RAM setting, prefill is slow", () => {
+  const mac = GPU_BY_ID.m4max128;
+  const fit = estimate({ ...base, gpu: mac, model: MODEL_BY_ID["llama33-70b"], ramGB: 8 });
+  assert.equal(fit.unified, true);
+  assert.equal(fit.ramGB, 128);
+  assert.equal(fit.ramOk, true);
+  assert.equal(fit.fullOffload, true);
+  assert.ok(fit.prefillTokS < 200, `got ${fit.prefillTokS}`);
+  const vllm = estimate({ ...base, gpu: mac, model: MODEL_BY_ID["llama31-8b"], backend: "vllm" });
+  assert.equal(vllm.verdict, "no");
+});
+
+test("custom VRAM budget never borrows a unified-memory machine as speed reference", async () => {
+  const { nearestDiscreteGpu } = await import("./gpus.ts");
+  assert.equal(nearestDiscreteGpu(96).unifiedMemGB, undefined);
+  assert.equal(nearestDiscreteGpu(128).unifiedMemGB, undefined);
+});

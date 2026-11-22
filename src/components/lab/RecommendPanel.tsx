@@ -1,6 +1,6 @@
 import { formatGB, formatTok } from "@/lib/lab/calc";
 import { BACKENDS } from "@/lib/lab/commands";
-import { GPUS } from "@/lib/lab/gpus";
+import { nearestDiscreteGpu } from "@/lib/lab/gpus";
 import { recommendForVram, verdictOf, type RecCard } from "@/lib/lab/recommend";
 import { useLabStore } from "@/lib/lab/store";
 import { cn } from "@/lib/utils";
@@ -25,11 +25,7 @@ export function RecommendPanel() {
   );
 
   function apply(card: RecCard) {
-    const nearest =
-      rec.gpuHint ??
-      [...GPUS].sort(
-        (a, b) => Math.abs(a.vramGB - vramInput) - Math.abs(b.vramGB - vramInput),
-      )[0];
+    const nearest = rec.gpuHint ?? nearestDiscreteGpu(vramInput);
     loadPreset({
       gpuId: nearest?.id,
       modelId: card.model.id,

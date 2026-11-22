@@ -5,17 +5,19 @@ export function CopyButton({
   text,
   label,
 }: {
-  text: string;
+  /** Text, or a function evaluated at click time (e.g. the current URL). */
+  text: string | (() => string);
   label: string;
 }) {
   const [done, setDone] = useState(false);
 
   async function copy() {
+    const value = typeof text === "function" ? text() : text;
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(value);
     } catch {
       const ta = document.createElement("textarea");
-      ta.value = text;
+      ta.value = value;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand("copy");

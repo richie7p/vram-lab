@@ -44,9 +44,18 @@ export type GpuId =
   | "5090"
   | "3090x2"
   | "a6000"
-  | "pro6000";
+  | "pro6000"
+  | "b580"
+  | "9070xt"
+  | "m4pro48"
+  | "m4max128"
+  | "m3ultra512"
+  | "strixhalo128"
+  | "dgxspark";
 
-export type GpuGroupId = "entry" | "12" | "16" | "24" | "work";
+export type GpuGroupId = "entry" | "12" | "16" | "24" | "work" | "unified";
+
+export type GpuVendor = "nvidia" | "amd" | "intel" | "apple";
 
 export type Gpu = {
   id: GpuId;
@@ -59,6 +68,16 @@ export type Gpu = {
   cards: number;
   decodeEfficiency: number;
   kernelMs: number;
+  /** Effective prompt-processing throughput in llama.cpp (TFLOPS), not the spec sheet. */
+  ppTflops: number;
+  vendor: GpuVendor;
+  /**
+   * Unified memory (Apple Silicon, Strix Halo, DGX Spark). vramGB is then the
+   * default GPU-addressable share; this is the whole pool shared with the OS.
+   */
+  unifiedMemGB?: number;
+  /** CPU-side memory bandwidth used for offloaded weights (default: desktop DDR5). */
+  cpuBandwidthGBs?: number;
   note: string;
   group: GpuGroupId;
 };
@@ -78,6 +97,8 @@ export type Model = {
   maxCtx: number;
   nativeCtx: number;
   kind: ModelArch;
+  /** MoE only: parameters outside routed experts (attention, shared experts, embeddings). */
+  nonExpertB?: number;
   /**
    * Sliding-window / chunked attention. `localLayers` of the `attnLayers` only
    * keep the last `window` tokens in KV; the rest attend to the full context.
@@ -98,7 +119,8 @@ export type Quant = {
 export type LabAction =
   | { kind: "quant"; id: QuantId }
   | { kind: "ctx"; value: number }
-  | { kind: "kv"; value: KvPrecision };
+  | { kind: "kv"; value: KvPrecision }
+  | { kind: "backend"; value: BackendId };
 
 export type Suggestion = {
   text: string;
@@ -148,6 +170,10 @@ export type Fit = {
   gapGB: number;
   headroomPct: number;
   fullOffload: boolean;
+  /** MoE: attention + non-expert weights on GPU, some layers' experts on CPU (--n-cpu-moe). */
+  moeOffload: boolean;
+  /** Layers whose routed experts stay on CPU under moeOffload. */
+  cpuMoeLayers: number;
   gpuLayers: number;
   totalLayers: number;
   cpuOffloadGB: number;
@@ -160,6 +186,11 @@ export type Fit = {
   speedLow: number;
   speedHigh: number;
   speedMid: number;
+  /** Prompt processing (prefill) tok/s, averaged over filling the context. */
+  prefillTokS: number;
+  /** Seconds to read a prompt that fills the whole context. */
+  fillSec: number;
+  unified: boolean;
   suggestedCtx: number;
   suggestions: Suggestion[];
   kvBytesPerToken: number;

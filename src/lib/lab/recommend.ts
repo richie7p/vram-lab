@@ -1,5 +1,5 @@
 import { estimate, formatGB } from "./calc";
-import { GPUS } from "./gpus";
+import { nearestDiscreteGpu } from "./gpus";
 import { MODELS } from "./models";
 import { QUANT_BY_ID } from "./quants";
 import type { BackendId, Cost, Fit, Gpu, Model, Quant, Verdict } from "./types";
@@ -26,9 +26,7 @@ export type RecResult = {
 };
 
 function syntheticGpu(vramGB: number): Gpu {
-  const nearest = [...GPUS].sort(
-    (a, b) => Math.abs(a.vramGB - vramGB) - Math.abs(b.vramGB - vramGB),
-  )[0];
+  const nearest = nearestDiscreteGpu(vramGB);
   const scale = nearest.vramGB > 0 ? vramGB / nearest.vramGB : 1;
   return {
     ...nearest,
@@ -117,8 +115,7 @@ export function recommendForVram(
 ): RecResult {
   const vram = Math.min(192, Math.max(4, vramGB));
   const gpu = syntheticGpu(vram);
-  const nearestGpu =
-    [...GPUS].sort((a, b) => Math.abs(a.vramGB - vram) - Math.abs(b.vramGB - vram))[0] ?? null;
+  const nearestGpu = nearestDiscreteGpu(vram) ?? null;
 
   const comforts: RecCard[] = [];
   const challenges: RecCard[] = [];

@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { pinId } from "./calc";
-import { MODELS } from "./models";
+import { MODELS, MODEL_BY_ID } from "./models";
+import { DEFAULT_CONFIG, clampContext, isGpuId, sanitizeConfig, type LabConfig } from "./share";
 import type { BackendId, Family, GpuId, KvPrecision, LabAction, Pin, QuantId } from "./types";
 
 export type LabMode = "lab" | "recommend";
@@ -42,12 +43,28 @@ type LabState = {
   pinCurrent: () => void;
   removePin: (id: string) => void;
   loadPin: (pin: Pin) => void;
+  applyConfig: (c: LabConfig) => void;
 };
 
-function clampCtx(modelId: string, context: number) {
-  const m = MODELS.find((x) => x.id === modelId);
-  if (!m) return context;
-  return Math.min(Math.max(2048, context), m.maxCtx);
+const clampCtx = clampContext;
+
+/** Repair persisted state from older versions or a catalog that has since changed. */
+function sanitizePersisted(persisted: unknown, current: LabState): LabState {
+  const p = (persisted ?? {}) as Partial<LabState>;
+  const config = sanitizeConfig(p as Record<string, unknown>, DEFAULT_CONFIG);
+  const pins = Array.isArray(p.pins)
+    ? p.pins.filter(
+        (pin): pin is Pin =>
+          Boolean(pin) && isGpuId(pin.gpuId) && pin.modelId in MODEL_BY_ID,
+      )
+    : [];
+  return {
+    ...current,
+    mode: p.mode === "recommend" ? "recommend" : "lab",
+    ...config,
+    family: MODEL_BY_ID[config.modelId].family,
+    pins: pins.slice(-3),
+  };
 }
 
 function clampVram(n: number) {
@@ -119,6 +136,7 @@ export const useLabStore = create<LabState>()(
         if (action.kind === "quant") set({ quantId: action.id });
         if (action.kind === "ctx") set({ context: clampCtx(get().modelId, action.value) });
         if (action.kind === "kv") set({ kv: action.value });
+        if (action.kind === "backend") set({ backend: action.value });
       },
       pinCurrent: () => {
         const s = get();
@@ -148,6 +166,12 @@ export const useLabStore = create<LabState>()(
         set({ pins: [...s.pins.slice(-2), next] });
       },
       removePin: (id) => set({ pins: get().pins.filter((p) => p.id !== id) }),
+      applyConfig: (c) =>
+        set({
+          ...c,
+          mode: "lab",
+          family: MODEL_BY_ID[c.modelId]?.family ?? get().family,
+        }),
       loadPin: (pin) => {
         const m = MODELS.find((x) => x.id === pin.modelId);
         set({
@@ -165,6 +189,11 @@ export const useLabStore = create<LabState>()(
         });
       },
     }),
-    { name: "vram-lab-config-v3" },
+    {
+      name: "vram-lab-config-v3",
+      version: 4,
+      migrate: (persisted) => persisted as LabState,
+      merge: (persisted, current) => sanitizePersisted(persisted, current),
+    },
   ),
 );

@@ -90,7 +90,7 @@ export function Configurator() {
                       >
                         <span className="truncate text-sm font-medium">{g.shortName}</span>
                         <span className="font-mono text-xs tabular-nums text-muted">
-                          {g.vramGB} GB
+                          {g.unifiedMemGB ? `${g.unifiedMemGB} GB 統一` : `${g.vramGB} GB`}
                         </span>
                       </button>
                     );
@@ -310,6 +310,11 @@ export function Configurator() {
         </div>
         <div>
           <p className="mb-1.5 text-xs text-subtle">系統 RAM</p>
+          {gpu.unifiedMemGB ? (
+            <p className="mb-1.5 rounded-md bg-surface px-3 py-2 text-xs leading-relaxed text-muted">
+              統一記憶體：GPU 與系統共用 {gpu.unifiedMemGB} GB，下面的 RAM 設定不影響這台機器的估算。
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-1.5">
             {RAM_PRESETS.map((n) => (
               <button

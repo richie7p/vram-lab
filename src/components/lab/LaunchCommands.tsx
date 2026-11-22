@@ -36,6 +36,7 @@ export function LaunchCommands({
               key={b.id}
               type="button"
               onClick={() => onBackend(b.id)}
+              aria-pressed={backend === b.id}
               className={cn(
                 "min-h-8 rounded-full px-3 text-xs font-medium",
                 backend === b.id ? "bg-fg text-bg" : "text-muted",
@@ -51,8 +52,8 @@ export function LaunchCommands({
       </pre>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <CopyButton text={cmds.body} label="複製指令" />
-        <p className="text-xs text-subtle">
-          {cmds.ggufFile}
+        <p className="min-w-0 break-all font-mono text-xs text-subtle">
+          {cmds.backend === "vllm" ? cmds.hfRepo : cmds.ggufFile}
         </p>
       </div>
       {cmds.unsupported.length > 0 ? (

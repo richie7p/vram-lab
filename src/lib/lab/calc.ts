@@ -72,13 +72,38 @@ export function overheadGB(vramGB: number, model: Model, context: number): numbe
   return cuda + compute + 0.12;
 }
 
-function effectiveWeightGB(model: Model, quant: Quant): number {
-  const total = weightsGB(model, quant);
-  if (!model.activeParamsB || model.kind !== "moe") return total;
-  const ratio = clamp(model.activeParamsB / model.paramsB, 0.02, 1);
-  // Active experts + attention/shared weights; the 0.1 floor covers router,
-  // shared experts and less-coalesced expert reads.
-  return total * (0.1 + 0.9 * ratio);
+/** Desktop dual-channel DDR5, effective bandwidth for CPU-resident weights. */
+export const CPU_BANDWIDTH_GBS = 50;
+/** PCIe 4.0 x16 effective; offloaded weights are streamed per ubatch during prefill. */
+const PCIE_GBS = 24;
+const UBATCH = 512;
+/** Routed-expert reads are less coalesced than dense GEMV; shared weights read almost like dense. */
+const MOE_READ_FACTOR = 1.8;
+const MOE_SHARED_FACTOR = 1.1;
+
+/** Bytes read from memory per decoded token (GB). */
+function decodeBytesGB(model: Model, quant: Quant): number {
+  if (model.kind !== "moe" || !model.activeParamsB) return weightsGB(model, quant);
+  const split = moeSplit(model, quant);
+  if (split) {
+    return split.nonExpertGB * MOE_SHARED_FACTOR + split.activeExpertGB * MOE_READ_FACTOR;
+  }
+  const active = Math.min(model.activeParamsB, model.paramsB);
+  return ((active * quant.bpw) / 8) * MOE_READ_FACTOR;
+}
+
+/** MoE split for llama.cpp --n-cpu-moe: always-on weights vs routed experts. */
+function moeSplit(model: Model, quant: Quant) {
+  if (model.kind !== "moe" || !model.nonExpertB || !model.activeParamsB) return null;
+  const toGB = (b: number) => (b * quant.bpw) / 8;
+  const nonExpertGB = toGB(model.nonExpertB);
+  const expertGB = toGB(model.paramsB - model.nonExpertB);
+  const activeExpertGB = toGB(Math.max(model.activeParamsB - model.nonExpertB, 0));
+  return {
+    nonExpertGB,
+    expertPerLayerGB: expertGB / Math.max(model.layers, 1),
+    activeExpertGB,
+  };
 }
 
 export function rankVerdict(v: Verdict): number {
@@ -106,15 +131,22 @@ export function budgetVramGB(
   return useCustomVram ? vramBudgetGB : gpu.vramGB;
 }
 
-function backendNotes(backend: BackendId, kv: KvPrecision, quant: Quant): string[] {
+function backendNotes(
+  backend: BackendId,
+  kv: KvPrecision,
+  quant: Quant,
+  gpu: Gpu,
+): string[] {
   const out: string[] = [];
+  if (backend === "vllm" && gpu.vendor === "apple") {
+    out.push("vLLM 不支援 Apple Silicon GPU。Mac 請用 llama.cpp、Ollama 或 MLX。");
+  }
   if (backend === "vllm") {
-    out.push("vLLM 不跑 GGUF。指令只對齊 context 與 GPU 數，量化請改 AWQ／FP8／FP16。");
     out.push("vLLM 沒有 llama.cpp 式的 CPU offload；放不下就需要更多 VRAM 或張量並行。");
   }
   if (backend === "ollama") {
-    out.push("Ollama 的 num_gpu 對應 GPU 層數。Flash Attention 靠環境變數，不是所有建置都開。");
-    if (kv !== "fp16") out.push("Ollama 對 KV 量化支援不完整，Q8／Q4 KV 以 llama.cpp 較準。");
+    out.push("Ollama 的 num_gpu 對應 GPU 層數。Flash Attention 與 KV 精度是 ollama serve 的環境變數，對所有模型生效。");
+    if (kv !== "fp16") out.push("Ollama 的 KV 量化（OLLAMA_KV_CACHE_TYPE）需同時開 Flash Attention，部分模型會自動退回 FP16。");
     if (quant.id === "iq4xs") out.push("Ollama 官方 tag 常沒有 IQ4_XS，請自建 Modelfile 指向 GGUF。");
   }
   if (backend === "llamacpp" && kv !== "fp16") {
@@ -128,7 +160,8 @@ type CoreFit = Omit<Fit, "suggestedCtx" | "suggestions">;
 function estimateCore(opts: EstimateInput): CoreFit {
   const { gpu, model, quant } = opts;
   const backend: BackendId = opts.backend ?? "llamacpp";
-  const ramGB = clamp(opts.ramGB ?? 32, 4, 512);
+  const unified = Boolean(gpu.unifiedMemGB);
+  const ramGB = unified ? gpu.unifiedMemGB! : clamp(opts.ramGB ?? 32, 4, 512);
   const vramGB = Math.max(2, opts.vramGB ?? gpu.vramGB);
   const context = clamp(Math.round(opts.context), 512, model.maxCtx);
   const usable = usableVramGB(vramGB, gpu.cards);
@@ -138,51 +171,109 @@ function estimateCore(opts: EstimateInput): CoreFit {
   const demand = weights + kvGB + overhead;
   const perLayer = weights / Math.max(model.layers, 1);
 
-  const notes = backendNotes(backend, opts.kv, quant);
+  const notes = backendNotes(backend, opts.kv, quant, gpu);
   const vllmStrict = backend === "vllm";
+  const vllmBlocked = vllmStrict && gpu.vendor === "apple";
 
   let gpuLayers = model.layers;
   let fullOffload = demand <= usable + 0.05;
-  if (vllmStrict && !fullOffload) {
+  let moeOffload = false;
+  let cpuMoeLayers = 0;
+  let cpuOffloadGB = 0;
+  let gpuPlaced = demand;
+
+  const moe = moeSplit(model, quant);
+  if (!fullOffload && vllmStrict) {
     gpuLayers = 0;
+    gpuPlaced = Math.min(usable, demand);
   } else if (!fullOffload) {
+    // Plain layer split (-ngl / num_gpu).
     const vramForWeights = Math.max(0, usable - kvGB - overhead);
     gpuLayers = clamp(Math.floor(vramForWeights / Math.max(perLayer, 0.01)), 0, model.layers);
     if (gpuLayers >= model.layers) {
       fullOffload = true;
       gpuLayers = model.layers;
+    } else {
+      cpuOffloadGB = Math.max(0, weights - gpuLayers * perLayer);
+      gpuPlaced = Math.min(usable, gpuLayers * perLayer + kvGB + overhead);
+    }
+
+    // llama.cpp can instead keep every layer's attention on GPU and push only
+    // routed experts to CPU, which is much faster for MoE.
+    if (!fullOffload && moe && backend === "llamacpp") {
+      const base = moe.nonExpertGB + kvGB + overhead;
+      if (base <= usable) {
+        const gpuExpertLayers = clamp(
+          Math.floor((usable - base) / Math.max(moe.expertPerLayerGB, 0.01)),
+          0,
+          model.layers,
+        );
+        moeOffload = true;
+        gpuLayers = model.layers;
+        cpuMoeLayers = model.layers - gpuExpertLayers;
+        cpuOffloadGB = cpuMoeLayers * moe.expertPerLayerGB;
+        gpuPlaced = base + gpuExpertLayers * moe.expertPerLayerGB;
+      }
     }
   }
 
-  const cpuOffloadGB = fullOffload ? 0 : Math.max(0, weights - gpuLayers * perLayer);
-  const gpuPlaced = fullOffload
-    ? demand
-    : Math.min(usable, gpuLayers * perLayer + kvGB + overhead);
   const gpuFree = usable - gpuPlaced;
   const gap = Math.max(0, demand - usable);
   const headroomPct = vramGB > 0 ? gpuFree / vramGB : 0;
 
-  const ramNeed = 6 + cpuOffloadGB * 1.15 + Math.min(context / 8192, 3) * 0.35;
+  // Unified memory: GPU allocations come out of the same pool as the OS.
+  const ramNeed =
+    6 +
+    cpuOffloadGB * 1.15 +
+    Math.min(context / 8192, 3) * 0.35 +
+    (unified ? gpuPlaced : 0);
   const ramOk = ramGB + 0.25 >= ramNeed;
 
-  const gpuFrac = gpuLayers / model.layers;
-  const bytesPerTokGB = effectiveWeightGB(model, quant);
-  const bw = gpu.bandwidthGBs * gpu.decodeEfficiency;
-  const memSeconds = bytesPerTokGB / Math.max(bw, 1);
+  // ---- decode speed: time per token = GPU bytes / GPU bw + CPU bytes / CPU bw
+  const gpuBw = Math.max(gpu.bandwidthGBs * gpu.decodeEfficiency, 1);
+  const cpuBw = gpu.cpuBandwidthGBs ?? CPU_BANDWIDTH_GBS;
   const kernelSeconds = gpu.kernelMs / 1000;
-  let mid = 1 / (memSeconds + kernelSeconds);
-
-  if (!fullOffload) {
-    if (vllmStrict) mid *= 0.02;
-    else mid *= Math.pow(Math.max(gpuFrac, 0.05), 2.35);
+  const decodeGB = decodeBytesGB(model, quant);
+  let gpuReadGB = decodeGB;
+  let cpuReadGB = 0;
+  if (moeOffload && moe) {
+    const cpuFrac = cpuMoeLayers / model.layers;
+    gpuReadGB =
+      moe.nonExpertGB * MOE_SHARED_FACTOR + moe.activeExpertGB * (1 - cpuFrac) * MOE_READ_FACTOR;
+    cpuReadGB = moe.activeExpertGB * cpuFrac * 1.3;
+  } else if (!fullOffload) {
+    const gpuFrac = gpuLayers / model.layers;
+    gpuReadGB = decodeGB * gpuFrac;
+    cpuReadGB = decodeGB * (1 - gpuFrac);
   }
+  const kernelScale = moeOffload ? 1.4 : 1;
+  let mid = 1 / (gpuReadGB / gpuBw + cpuReadGB / cpuBw + kernelSeconds * kernelScale);
+  if (!fullOffload && vllmStrict) mid *= 0.02;
   if (!ramOk && cpuOffloadGB > 0) mid *= 0.35;
-
   const speed = speedRange(mid);
 
+  // ---- prefill: compute-bound on GPU; CPU-resident weights stream over PCIe
+  const activeB = Math.min(model.activeParamsB ?? model.paramsB, model.paramsB);
+  const flopsPerTok = 2 * activeB * 1e9;
+  const moeEff = model.kind === "moe" ? 0.55 : 1;
+  const attnDecay = 1 / (1 + context / 131072);
+  let ppSecPerTok = flopsPerTok / (gpu.ppTflops * 1e12 * moeEff * attnDecay);
+  if (cpuOffloadGB > 0) {
+    ppSecPerTok += unified
+      ? (flopsPerTok * (cpuOffloadGB / weights)) / 1.5e12
+      : cpuOffloadGB / PCIE_GBS / UBATCH;
+  }
+  if (!fullOffload && vllmStrict) ppSecPerTok *= 50;
+  const prefillTokS = Math.max(1, Math.round(1 / ppSecPerTok));
+  const fillSec = round1(context / prefillTokS);
+
+  // ---- verdict
+  const gpuFrac = gpuLayers / model.layers;
   let verdict: Verdict;
-  if (vllmStrict && !fullOffload) {
+  if (vllmBlocked || (vllmStrict && !fullOffload)) {
     verdict = "no";
+  } else if (moeOffload) {
+    verdict = speed.low >= 10 ? "ok" : speed.low >= 5 ? "tight" : "no";
   } else if (gpuLayers <= 0 || (!fullOffload && gpuFrac < 0.32 && speed.high < 4)) {
     verdict = "no";
   } else if (!fullOffload && gpuFrac < 0.45) {
@@ -203,10 +294,10 @@ function estimateCore(opts: EstimateInput): CoreFit {
     verdict = "no";
   }
 
-  if (!ramOk && cpuOffloadGB > 0.4) {
+  if (!ramOk && (cpuOffloadGB > 0.4 || unified)) {
     verdict = ramNeed > ramGB * 1.4 ? "no" : minVerdict(verdict, "tight");
     notes.push(
-      `CPU offload 估需系統 RAM ${round1(ramNeed)} GB，目前 ${ramGB} GB${ramNeed > ramGB * 1.4 ? "，很可能跑不起來" : "，會大量走 swap"}。`,
+      `${unified ? "統一記憶體" : "CPU offload"} 估需 RAM ${round1(ramNeed)} GB，目前 ${ramGB} GB${ramNeed > ramGB * 1.4 ? "，很可能跑不起來" : "，會大量走 swap"}。`,
     );
   }
 
@@ -232,6 +323,8 @@ function estimateCore(opts: EstimateInput): CoreFit {
     gapGB: round2(gap),
     headroomPct,
     fullOffload,
+    moeOffload,
+    cpuMoeLayers,
     gpuLayers,
     totalLayers: model.layers,
     cpuOffloadGB: round2(cpuOffloadGB),
@@ -244,6 +337,9 @@ function estimateCore(opts: EstimateInput): CoreFit {
     speedLow: speed.low,
     speedHigh: speed.high,
     speedMid: speed.mid,
+    prefillTokS,
+    fillSec,
+    unified,
     kvBytesPerToken: kvBytesPerTokenAt(model, context, opts.kv),
     qualityCap,
   };
@@ -264,7 +360,7 @@ export function suggestContext(opts: EstimateInput): number {
   let best = Math.min(2048, opts.model.maxCtx);
   for (const ctx of steps) {
     const fit = estimateCore({ ...opts, context: ctx });
-    if (rankVerdict(fit.verdict) >= 2 && fit.fullOffload) best = ctx;
+    if (rankVerdict(fit.verdict) >= 2 && (fit.fullOffload || fit.moeOffload)) best = ctx;
     else break;
   }
   return best;
@@ -283,7 +379,37 @@ function buildSuggestions(
     });
   }
 
-  if (!fit.fullOffload) {
+  if (fit.moeOffload) {
+    out.push({
+      text: `MoE expert offload：注意力層與 KV 全在 GPU，${fit.cpuMoeLayers}/${fit.totalLayers} 層的 expert 放 CPU（llama.cpp --n-cpu-moe ${fit.cpuMoeLayers}），比逐層切分快。`,
+    });
+  } else if (
+    !fit.fullOffload &&
+    model.kind === "moe" &&
+    model.nonExpertB &&
+    fit.backend === "ollama"
+  ) {
+    out.push({
+      text: "Ollama 只能逐層切分。改用 llama.cpp 的 --n-cpu-moe 只把 expert 放 CPU，注意力和 KV 都留在 GPU，速度與長 prompt 處理都會明顯更好。",
+      action: { kind: "backend", value: "llamacpp" },
+      actionLabel: "改 llama.cpp",
+    });
+  }
+
+  if (!fit.fullOffload && gpu.vendor === "apple" && !fit.moeOffload) {
+    const total = gpu.unifiedMemGB ?? vramGB;
+    out.push({
+      text: `macOS 預設只讓 GPU 用約 75% 統一記憶體。可用 sudo sysctl iogpu.wired_limit_mb=${Math.round((total - 8) * 1024)} 調高（保留約 8GB 給系統）。`,
+    });
+  }
+
+  if (fit.fillSec >= 60 && context >= 16384) {
+    out.push({
+      text: `讀滿 ${formatTok(context)} 的 prompt 約要 ${formatDuration(fit.fillSec)}（約 ${fit.prefillTokS} tok/s）。長文件、RAG、coding agent 會先卡在這裡。`,
+    });
+  }
+
+  if (!fit.fullOffload && !fit.moeOffload) {
     const lighter = (["q2", "q3km", "iq4xs", "q4ks", "q4km", "q5", "q6", "q8", "fp16"] as const)
       .map((id) => QUANT_BY_ID[id])
       .filter((q) => q.bpw < quant.bpw)
@@ -321,7 +447,7 @@ function buildSuggestions(
         });
       }
     }
-  } else if (fit.gpuFreeGB < 1.2 && context >= 8192) {
+  } else if (fit.fullOffload && fit.gpuFreeGB < 1.2 && context >= 8192) {
     out.push({
       text: "VRAM 剩餘不多。長對話時 KV 會繼續漲，建議留 15% 以上餘裕。",
       action:
@@ -387,7 +513,7 @@ function buildSuggestions(
     });
   }
 
-  return out.slice(0, 5);
+  return out.slice(0, 6);
 }
 
 function peekFit(opts: EstimateInput) {
@@ -399,6 +525,19 @@ function peekFit(opts: EstimateInput) {
   const overhead = overheadGB(vramGB, opts.model, opts.context);
   const total = weights + kvGB + overhead;
   return { full: total <= usable + 0.05, weights, free: usable - total };
+}
+
+export function formatDuration(sec: number): string {
+  if (sec < 1) return `${Math.round(sec * 1000)} ms`;
+  if (sec < 90) return `${Math.round(sec)} 秒`;
+  if (sec < 5400) return `${Math.round(sec / 60)} 分鐘`;
+  return `${(sec / 3600).toFixed(1)} 小時`;
+}
+
+export function formatTokS(n: number): string {
+  if (n >= 10000) return `${Math.round(n / 1000)}K`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return String(Math.round(n));
 }
 
 export function formatTok(n: number): string {
